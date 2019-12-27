@@ -1,17 +1,44 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    <Filter Include="00.BootLoader">
+      <UniqueIdentifier>{ac563734-fefb-44a2-8d39-a84fcee6f2d4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    <Filter Include="01.Kernel32">
+      <UniqueIdentifier>{fb096493-a2b1-4e66-90db-f555a8db269d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="02.Kernel64">
+      <UniqueIdentifier>{81a78bf2-3b5a-4a89-a8f3-7d683b4eee90}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application">
+      <UniqueIdentifier>{8640c137-16d0-485b-bb69-32ba19d33457}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Utility">
+      <UniqueIdentifier>{69396a5e-4d12-452d-b8d0-d98ed81537e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.Kernel32\Temp">
+      <UniqueIdentifier>{54f99a8e-b844-49d9-9c9d-77abb90a3594}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Kernel64\Source">
+      <UniqueIdentifier>{d2d67ba6-9984-47aa-842f-ede74525b65b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="01.Kernel32\Source">
+      <UniqueIdentifier>{c10a4614-5d69-4e90-bbc3-2911bcb01219}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="02.Kernel64\Temp">
+      <UniqueIdentifier>{4985f8f5-1bb7-4bbf-9e23-9c7edd1cdd57}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Makefile" />
+    <ClCompile Include="00.BootLoader\Makefile">
+      <Filter>00.BootLoader</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="00.BootLoader\BootLoader.asm">
+      <Filter>00.BootLoader</Filter>
+    </None>
+    <None Include="..\run.bat" />
   </ItemGroup>
 </Project>
