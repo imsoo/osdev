@@ -16,14 +16,8 @@
     <Filter Include="04.Utility">
       <UniqueIdentifier>{69396a5e-4d12-452d-b8d0-d98ed81537e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="01.Kernel32\Temp">
-      <UniqueIdentifier>{54f99a8e-b844-49d9-9c9d-77abb90a3594}</UniqueIdentifier>
-    </Filter>
     <Filter Include="02.Kernel64\Source">
       <UniqueIdentifier>{d2d67ba6-9984-47aa-842f-ede74525b65b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="01.Kernel32\Source">
-      <UniqueIdentifier>{c10a4614-5d69-4e90-bbc3-2911bcb01219}</UniqueIdentifier>
     </Filter>
     <Filter Include="02.Kernel64\Temp">
       <UniqueIdentifier>{4985f8f5-1bb7-4bbf-9e23-9c7edd1cdd57}</UniqueIdentifier>
@@ -40,5 +34,11 @@
       <Filter>00.BootLoader</Filter>
     </None>
     <None Include="..\run.bat" />
+    <None Include="01.Kernel32\VirtualOS.asm">
+      <Filter>01.Kernel32</Filter>
+    </None>
+    <None Include="01.Kernel32\Makefile">
+      <Filter>01.Kernel32</Filter>
+    </None>
   </ItemGroup>
 </Project>

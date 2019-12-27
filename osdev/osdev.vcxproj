@@ -96,6 +96,8 @@
   <ItemGroup>
     <None Include="..\run.bat" />
     <None Include="00.BootLoader\BootLoader.asm" />
+    <None Include="01.Kernel32\Makefile" />
+    <None Include="01.Kernel32\VirtualOS.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
