@@ -68,9 +68,13 @@
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>make clean &amp; make</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>make clean &amp; build</NMakeReBuildCommandLine>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\</IntDir>
+    <NMakeIncludeSearchPath>
+    </NMakeIncludeSearchPath>
+    <NMakeForcedIncludes>
+    </NMakeForcedIncludes>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeOutput>osdev.exe</NMakeOutput>
@@ -91,13 +95,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="00.BootLoader\Makefile" />
+    <ClCompile Include="01.Kernel32\Source\Main.c" />
+    <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
     <ClCompile Include="Makefile" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\run.bat" />
     <None Include="00.BootLoader\BootLoader.asm" />
     <None Include="01.Kernel32\Makefile" />
-    <None Include="01.Kernel32\VirtualOS.asm" />
+    <None Include="01.Kernel32\Source\EntryPoint.s" />
+    <None Include="04.Utility\00.ImageMaker\makefile" />
+    <None Include="04.Utility\makefile" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="01.Kernel32\Source\Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -22,11 +22,23 @@
     <Filter Include="02.Kernel64\Temp">
       <UniqueIdentifier>{4985f8f5-1bb7-4bbf-9e23-9c7edd1cdd57}</UniqueIdentifier>
     </Filter>
+    <Filter Include="01.Kernel32\Source">
+      <UniqueIdentifier>{aee81489-8f14-40fe-b340-942cd3d9c0dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="04.Utility\00.ImageMaker">
+      <UniqueIdentifier>{2261562d-f58a-4735-afc8-febb7e3a5174}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
     <ClCompile Include="00.BootLoader\Makefile">
       <Filter>00.BootLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="01.Kernel32\Source\Main.c">
+      <Filter>01.Kernel32\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c">
+      <Filter>04.Utility\00.ImageMaker</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -34,11 +46,22 @@
       <Filter>00.BootLoader</Filter>
     </None>
     <None Include="..\run.bat" />
-    <None Include="01.Kernel32\VirtualOS.asm">
-      <Filter>01.Kernel32</Filter>
-    </None>
     <None Include="01.Kernel32\Makefile">
       <Filter>01.Kernel32</Filter>
     </None>
+    <None Include="01.Kernel32\Source\EntryPoint.s">
+      <Filter>01.Kernel32\Source</Filter>
+    </None>
+    <None Include="04.Utility\makefile">
+      <Filter>04.Utility</Filter>
+    </None>
+    <None Include="04.Utility\00.ImageMaker\makefile">
+      <Filter>04.Utility\00.ImageMaker</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="01.Kernel32\Source\Types.h">
+      <Filter>01.Kernel32\Source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
