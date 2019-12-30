@@ -10,6 +10,22 @@ START:
   mov ds, ax  ; ds 0x1000
   mov es, ax  ; es 0x1000
 
+  ; A20 Gate Enable Using BIOS
+  mov ax, 0x2401	; A20 gate enable service
+  int 0x15			; BIOS SWI
+
+  jc .A20_GATE_ERROR	; error handle
+  jmp .A20_GATE_SUCCESS
+
+.A20_GATE_ERROR:
+  ; if A20 gate enable using bios is fail, then using system control port
+  in al, 0x92	; read from system control port
+  or al, 0x02	; set A20 gate bit
+  and al, 0xFE  ; clear system reset bit (0)
+  out 0x92, al	; write 
+
+.A20_GATE_SUCCESS:
+
   cli	; interrupt off
   lgdt [GDTR]	; GDTR load
 

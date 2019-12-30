@@ -138,7 +138,7 @@ void WriteKernelInformation( int iTargetFd, int iKernelSectorCount )
     long lPosition;
     
     // 파일의 시작에서 5바이트 떨어진 위치가 커널의 총 섹터 수 정보를 나타냄
-    lPosition = lseek( iTargetFd, 5, SEEK_SET );
+    lPosition = lseek( iTargetFd, (off_t)5, SEEK_SET );
     if( lPosition == -1 )
     {
         fprintf( stderr, "lseek fail. Return value = %d, errno = %d, %d\n", 
