@@ -34,11 +34,11 @@ START:
   mov eax, 0x4000003B ; PG=0, CD=1, NW=0, AM=0, WP=0, NE=1, ET=1, TS=1, EM=0, MP=1, PE=1
   mov cr0, eax		; set cr0 register
 
-  jmp dword 0x08:(PROTECTED_MODE - $$ + 0x10000)
+  jmp dword 0x18:(PROTECTED_MODE - $$ + 0x10000)
 
 [BITS 32]
 PROTECTED_MODE:
-  mov ax, 0x10	; 0x10 data segment descriptor
+  mov ax, 0x20	; 0x20 data segment descriptor
   mov ds, ax
   mov es, ax
   mov fs, ax
@@ -56,7 +56,7 @@ PROTECTED_MODE:
   call PRINT_MESSAGE
   add esp, 12
 
-  jmp dword 0x08:0x10200	; jump C kernel (0x10200)
+  jmp dword 0x18:0x10200	; jump C kernel (0x10200)
 
 ;-----------------------------------
 ; function code section begin
@@ -133,6 +133,24 @@ GDT:
 	db 0x00
 	db 0x00
 	db 0x00
+
+  ; IA-32e mode Code segment descriptor
+  IA32e_CODE_DESCRIPTOR:
+    dw 0xFFFF	; Limit [15:0]
+	dw 0x0000	; Base [15:0]
+	db 0x00		; Base [23:16]
+	db 0x9A		; P=1, DPL=0, Code Segment, Execute/Read
+	db 0xAF		; G=1, D=0, L=1, Limit[19:16]
+	db 0x00		; Base [31:24]
+  
+  ; IA-32e mode data segment descriptor
+  IA32e_DATA_DESCRIPTOR:
+    dw 0xFFFF	; Limit [15:0]
+	dw 0x0000	; Base [15:0]
+	db 0x00		; Base [23:16]
+	db 0x92		; P=1, DPL=0, Data Segment, Read/Write
+	db 0xAF		; G=1, D=0, L=1, Limit[19:16]
+	db 0x00		; Base [31:24]
   
   ; PM CODE descriptor
   CODE_DESCRIPTOR:

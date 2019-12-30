@@ -19,9 +19,6 @@
     <Filter Include="02.Kernel64\Source">
       <UniqueIdentifier>{d2d67ba6-9984-47aa-842f-ede74525b65b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="02.Kernel64\Temp">
-      <UniqueIdentifier>{4985f8f5-1bb7-4bbf-9e23-9c7edd1cdd57}</UniqueIdentifier>
-    </Filter>
     <Filter Include="01.Kernel32\Source">
       <UniqueIdentifier>{aee81489-8f14-40fe-b340-942cd3d9c0dd}</UniqueIdentifier>
     </Filter>
@@ -34,11 +31,17 @@
     <ClCompile Include="00.BootLoader\Makefile">
       <Filter>00.BootLoader</Filter>
     </ClCompile>
+    <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c">
+      <Filter>04.Utility\00.ImageMaker</Filter>
+    </ClCompile>
     <ClCompile Include="01.Kernel32\Source\Main.c">
       <Filter>01.Kernel32\Source</Filter>
     </ClCompile>
-    <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c">
-      <Filter>04.Utility\00.ImageMaker</Filter>
+    <ClCompile Include="01.Kernel32\Source\Page.c">
+      <Filter>01.Kernel32\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\Main.c">
+      <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -58,9 +61,24 @@
     <None Include="04.Utility\00.ImageMaker\makefile">
       <Filter>04.Utility\00.ImageMaker</Filter>
     </None>
+    <None Include="01.Kernel32\Source\ModeSwitch.asm">
+      <Filter>01.Kernel32\Source</Filter>
+    </None>
+    <None Include="02.Kernel64\Source\EntryPoint.s">
+      <Filter>02.Kernel64\Source</Filter>
+    </None>
+    <None Include="02.Kernel64\Makefile">
+      <Filter>02.Kernel64</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01.Kernel32\Source\Types.h">
+      <Filter>01.Kernel32\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="01.Kernel32\Source\Page.h">
+      <Filter>01.Kernel32\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="01.Kernel32\Source\ModeSwitch.h">
       <Filter>01.Kernel32\Source</Filter>
     </ClInclude>
   </ItemGroup>

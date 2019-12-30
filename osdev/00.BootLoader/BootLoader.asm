@@ -6,6 +6,7 @@ SECTION .text	; define text segment
   jmp 0x07C0:START	; copy 0x07C0 to CS register and jump START label
 
 TOTAL_SECTOR_COUNT: dw 0x2 ; os image size (sector count)
+KERNEL32_SECTOR_COUNT: dw 0x2 ; prevention mode kernel size (sector count)
 
 
 ;-----------------------------------

@@ -96,6 +96,8 @@
   <ItemGroup>
     <ClCompile Include="00.BootLoader\Makefile" />
     <ClCompile Include="01.Kernel32\Source\Main.c" />
+    <ClCompile Include="01.Kernel32\Source\Page.c" />
+    <ClCompile Include="02.Kernel64\Source\Main.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
     <ClCompile Include="Makefile" />
   </ItemGroup>
@@ -104,10 +106,15 @@
     <None Include="00.BootLoader\BootLoader.asm" />
     <None Include="01.Kernel32\Makefile" />
     <None Include="01.Kernel32\Source\EntryPoint.s" />
+    <None Include="01.Kernel32\Source\ModeSwitch.asm" />
+    <None Include="02.Kernel64\Makefile" />
+    <None Include="02.Kernel64\Source\EntryPoint.s" />
     <None Include="04.Utility\00.ImageMaker\makefile" />
     <None Include="04.Utility\makefile" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="01.Kernel32\Source\ModeSwitch.h" />
+    <ClInclude Include="01.Kernel32\Source\Page.h" />
     <ClInclude Include="01.Kernel32\Source\Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
