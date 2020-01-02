@@ -2,7 +2,7 @@
 
 SECTION .text	; define text segment
 
-global kInPortByte, kOutPortByte
+global kInPortByte, kOutPortByte, kLoadGDTR, kLoadTR, kLoadIDTR
 
 ; read from port one byte
 ; PARAM port_num
@@ -28,4 +28,22 @@ kOutPortByte:
 
   pop rax
   pop rdx
+  ret
+
+; load GDT in GDTR
+;   PARAM gdt address
+kLoadGDTR:
+  lgdt [rdi]
+  ret
+
+; load TSS in TR
+;   PARAM TSS offset
+kLoadTR:
+  ltr di
+  ret
+
+; load IDT in IDTR
+;   PARAM IDT address
+kLoadIDTR:
+  lidt [rdi]
   ret
