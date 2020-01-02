@@ -3,6 +3,7 @@
 SECTION .text	; define text segment
 
 global kInPortByte, kOutPortByte, kLoadGDTR, kLoadTR, kLoadIDTR
+global kEnableInterrupt, kDisableInterrupt, kReadFLAGS
 
 ; read from port one byte
 ; PARAM port_num
@@ -46,4 +47,23 @@ kLoadTR:
 ;   PARAM IDT address
 kLoadIDTR:
   lidt [rdi]
+  ret
+
+; enable interrupt
+;   PARAM None
+kEnableInterrupt:
+  sti
+  ret
+
+; disable interrupt
+;   PARAM None
+kDisableInterrupt:
+  cli
+  ret
+
+; read RFLAGS and get
+;   PARAM None
+kReadRFLAGS:
+  pushfq
+  pop rax
   ret

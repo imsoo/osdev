@@ -1,6 +1,7 @@
 #include "Types.h"
 #include "Keyboard.h"
 #include "Descriptor.h"
+#include "PIC.h"
 
 // function define
 void kPrintString(int iX, int iY, const char* pcString);
@@ -29,6 +30,7 @@ void Main(void)
   kInitializeIDTTables();
   kLoadIDTR(IDTR_STARTADDRESS);
   kPrintString(45, 14, "Pass");
+
   kPrintString(0, 15, "Keyboard Activate...........................[    ]");
 
   // key board enable
@@ -41,13 +43,22 @@ void Main(void)
     while (1);
   } 
 
+  kPrintString(0, 16, "PIC Controller And Interrupt Initialize.....[    ]");
+  // Init PIC
+  kInitializePIC();
+  // Interrupt Mask clear
+  kMaskPICInterrupt(0);
+  // Enable interrupt
+  kEnableInterrupt();
+  kPrintString(45, 16, "Pass");
+
   while (1) {
     if (kIsOutputBufferFull() == TRUE) {
       bTemp = kGetKeyboardScanCode();
 
       if (kConvertScanCodeToASCIICode(bTemp, &(vcTemp[0]), &bFlags) == TRUE) {
         if (bFlags & KEY_FLAGS_DOWN) {
-          kPrintString(i++, 16, vcTemp);
+          kPrintString(i++, 17, vcTemp);
         }
 
         if (vcTemp[0] == '0')

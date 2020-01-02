@@ -52,6 +52,12 @@
     <ClCompile Include="02.Kernel64\Source\Utility.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\InterruptHandler.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\PIC.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -82,6 +88,9 @@
     <None Include="02.Kernel64\Source\AssemblyUtility.asm">
       <Filter>02.Kernel64\Source</Filter>
     </None>
+    <None Include="02.Kernel64\Source\ISR.asm">
+      <Filter>02.Kernel64\Source</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01.Kernel32\Source\Types.h">
@@ -106,6 +115,15 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\Utility.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\PIC.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\ISR.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\InterruptHandler.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>
