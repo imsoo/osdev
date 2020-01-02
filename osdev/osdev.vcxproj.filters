@@ -43,6 +43,9 @@
     <ClCompile Include="02.Kernel64\Source\Main.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\Keyborad.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -70,6 +73,9 @@
     <None Include="02.Kernel64\Makefile">
       <Filter>02.Kernel64</Filter>
     </None>
+    <None Include="02.Kernel64\Source\AssemblyUtility.asm">
+      <Filter>02.Kernel64\Source</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01.Kernel32\Source\Types.h">
@@ -80,6 +86,15 @@
     </ClInclude>
     <ClInclude Include="01.Kernel32\Source\ModeSwitch.h">
       <Filter>01.Kernel32\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\Keyboard.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\Types.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\AssemblyUtility.h">
+      <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
