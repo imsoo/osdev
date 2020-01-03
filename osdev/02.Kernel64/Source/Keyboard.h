@@ -73,7 +73,7 @@ typedef struct kKeyMappingEntryStruct
 typedef struct kKeyboardManagerStruct
 {
   // combine key status
-  BOOL bShiftOn;
+  BOOL bShiftDown;
   BOOL bCapsLockOn;
   BOOL bNumLockOn;
   BOOL bScrollLockOn;

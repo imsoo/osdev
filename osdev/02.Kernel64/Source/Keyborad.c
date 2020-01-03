@@ -101,7 +101,7 @@ BOOL kActivateKeyboard(void)
 */
 BYTE kGetKeyboardScanCode(void)
 {
-  while (kIsOutputBufferFull());
+  while (kIsOutputBufferFull() == FALSE);
 
   return kInPortByte(0x60);
 }
@@ -367,7 +367,7 @@ BOOL kIsUseCombinedCode(BYTE bScanCode)
   // alpha
   if (kIsAlphabetScanCode(bDownScanCode) == TRUE)
   {
-    if (gs_stKeyBoardManager.bShiftOn ^ gs_stKeyBoardManager.bCapsLockOn)
+    if (gs_stKeyBoardManager.bShiftDown ^ gs_stKeyBoardManager.bCapsLockOn)
       bUseCombineKey = TRUE;
     else
       bUseCombineKey = FALSE;
@@ -376,7 +376,7 @@ BOOL kIsUseCombinedCode(BYTE bScanCode)
   // number or symbol
   if (kIsNumberOrSymbolScanCode(bDownScanCode) == TRUE)
   {
-    if (gs_stKeyBoardManager.bShiftOn == TRUE)
+    if (gs_stKeyBoardManager.bShiftDown == TRUE)
       bUseCombineKey = TRUE;
     else
       bUseCombineKey = FALSE;
@@ -391,6 +391,7 @@ BOOL kIsUseCombinedCode(BYTE bScanCode)
     else
       bUseCombineKey = FALSE;
   }
+
   return bUseCombineKey;
 }
 
@@ -412,7 +413,7 @@ void UpdateCombinationKeyStatusAndLED(BYTE bScanCode)
 
   // shift
   if ((bDownScanCode == 42) || (bDownScanCode == 54))
-    gs_stKeyBoardManager.bShiftOn = TRUE;
+    gs_stKeyBoardManager.bShiftDown = TRUE;
   // caps lock
   else if ((bDownScanCode == 58) && (bDown == TRUE)) {
     gs_stKeyBoardManager.bCapsLockOn ^= TRUE;

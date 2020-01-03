@@ -3,9 +3,9 @@
 ###################
 
 NASM64 = nasm -f elf64
-GCC64 = x86_64-pc-linux-gcc.exe -c -m64 -ffreestanding
-LD64 = x86_64-pc-linux-ld.exe -melf_x86_64 -T ../elf_x86_64.x -nostdlib -e Main -Ttext 0x200000
-OBJCOPY64 = x86_64-pc-linux-objcopy.exe -j .text -j .data -j .rodata -j .bss -S -O binary
+GCC64 = x86_64-pc-linux-gcc -c -m64 -ffreestanding
+LD64 = x86_64-pc-linux-ld -melf_x86_64 -T ../elf_x86_64.x -nostdlib -e Main -Ttext 0x200000
+OBJCOPY64 = x86_64-pc-linux-objcopy -j .text -j .data -j .rodata -j .bss -S -O binary
 
 OBJECT_DIR = Temp
 SOURCE_DIR = Source

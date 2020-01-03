@@ -61,6 +61,12 @@
     <ClCompile Include="02.Kernel64\Source\Queue.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\Console.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\ConsoleShell.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -130,6 +136,12 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\Queue.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\Console.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\ConsoleShell.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

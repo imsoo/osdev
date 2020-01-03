@@ -3,9 +3,9 @@
 ###################
 
 NASM32 = nasm
-GCC32 = x86_64-pc-linux-gcc.exe -c -m32 -ffreestanding
-LD32 = x86_64-pc-linux-ld.exe -melf_i386 -T ../elf_i386.x -nostdlib -e Main -Ttext 0x10200
-OBJCOPY32 = x86_64-pc-linux-objcopy.exe -j .text -j .data -j .rodata -j .bss -S -O binary
+GCC32 = x86_64-pc-linux-gcc -c -m32 -ffreestanding
+LD32 = x86_64-pc-linux-ld -melf_i386 -T ../elf_i386.x -nostdlib -e Main -Ttext 0x10200
+OBJCOPY32 = x86_64-pc-linux-objcopy -j .text -j .data -j .rodata -j .bss -S -O binary
 
 OBJECT_DIR = Temp
 SOURCE_DIR = Source
