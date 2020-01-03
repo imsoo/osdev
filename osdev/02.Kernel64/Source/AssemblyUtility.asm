@@ -3,7 +3,7 @@
 SECTION .text	; define text segment
 
 global kInPortByte, kOutPortByte, kLoadGDTR, kLoadTR, kLoadIDTR
-global kEnableInterrupt, kDisableInterrupt, kReadFLAGS
+global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 
 ; read from port one byte
 ; PARAM port_num
