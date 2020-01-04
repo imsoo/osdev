@@ -3,7 +3,6 @@
 
 #include "Types.h"
 
-
  // I/O Port
 #define PIC_MASTER_PORT1    0x20
 #define PIC_MASTER_PORT2    0x21
@@ -12,7 +11,6 @@
 
 // offset in IDT 0x20
 #define PIC_IRQSTARTVECTOR  0x20
-
 
 // function
 void kInitializePIC(void);

@@ -2,6 +2,9 @@
 #include "Console.h"
 #include "Keyboard.h"
 #include "Utility.h"
+#include "PIT.h"
+#include "PIC.h"
+#include "AssemblyUtility.h"
 
  // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -11,6 +14,12 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
         { "totalram", "Show Total RAM Size", kShowTotalRAMSize },
         { "strtod", "String To Decial/Hex Convert", kStringToDecimalHexTest },
         { "shutdown", "Shutdown And Reboot OS", kShutDown },
+        { "settimer", "Set PIT Controller Counter0, ex)settimer 10(ms) 1(periodic)",
+                kSetTimer },
+        { "wait", "Wait ms Using PIT, ex)wait 100(ms)", kWaitUsingPIT },
+        { "rdtsc", "Read Time Stamp Counter", kReadTimeStampCounter },
+        { "cpuspeed", "Measure Processor Speed", kMeasureProcessorSpeed },
+        { "date", "Show Date And Time", kShowDateAndTime }
 };
 
 
@@ -108,7 +117,7 @@ void kExecuteCommand(const char* pcCommandBuffer)
   for (i = 0; i < iCount; i++)
   {
     iCommandLength = kStrLen(gs_vstCommandTable[i].pcCommand);
-    kPrintf("[%d][%s][%d][%d]\n", iSpaceIndex, gs_vstCommandTable[i].pcCommand, iCommandLength, kMemCmp(gs_vstCommandTable[i].pcCommand, pcCommandBuffer, iSpaceIndex));
+
     // strcmp and strlen compare
     if ((iCommandLength == iSpaceIndex) &&
       (kMemCmp(gs_vstCommandTable[i].pcCommand, pcCommandBuffer, iSpaceIndex) == 0)
@@ -275,4 +284,133 @@ void kShutDown(const char* pcParamegerBuffer)
   kPrintf("Press Any Key To Reboot PC...");
   kGetCh();
   kReboot();
+}
+
+/*
+  set PIT counter
+*/
+void kSetTimer(const char* pcParameterBuffer)
+{
+  char vcParameter[100];
+  PARAMETERLIST stList;
+  long lValue;
+  BOOL bPeriodic;
+
+  // Init Param
+  kInitializeParameter(&stList, pcParameterBuffer);
+
+  // Param : milisecond
+  if (kGetNextParameter(&stList, vcParameter) == 0)
+  {
+    kPrintf("ex)settimer 10(ms) 1(periodic)\n");
+    return;
+  }
+  lValue = kAToI(vcParameter, 10);
+
+  // Param : Periodic
+  if (kGetNextParameter(&stList, vcParameter) == 0)
+  {
+    kPrintf("ex)settimer 10(ms) 1(periodic)\n");
+    return;
+  }
+  bPeriodic = kAToI(vcParameter, 10);
+
+  // set PIT 
+  kInitializePIT(MSTOCOUNT(lValue), bPeriodic);
+  kPrintf("Time = %d ms, Periodic = %d Change Complete\n", lValue, bPeriodic);
+}
+
+/*
+  wait MS using PIT
+*/
+void kWaitUsingPIT(const char* pcParameterBuffer)
+{
+  char vcParameter[100];
+  int iLength;
+  PARAMETERLIST stList;
+  long lMillisecond;
+  int i;
+
+  // Init Param
+  kInitializeParameter(&stList, pcParameterBuffer);
+  if (kGetNextParameter(&stList, vcParameter) == 0)
+  {
+    kPrintf("ex)wait 100(ms)\n");
+    return;
+  }
+
+  lMillisecond = kAToI(pcParameterBuffer, 10);
+  kPrintf("%d ms Sleep Start...\n", lMillisecond);
+
+  // Disable Interrupt & Wait
+  kDisableInterrupt();
+  for (i = 0; i < lMillisecond / 30; i++)
+  {
+    kWaitUsingDirectPIT(MSTOCOUNT(30));
+  }
+  kWaitUsingDirectPIT(MSTOCOUNT(lMillisecond % 30));
+
+  // Enable Interrupt
+  kEnableInterrupt();
+  kPrintf("%d ms Sleep Complete\n", lMillisecond);
+
+  // reset PIC default setting
+  kInitializePIT(MSTOCOUNT(1), TRUE);
+}
+
+/*
+  Read TimeStampCounter
+*/
+void kReadTimeStampCounter(const char* pcParameterBuffer)
+{
+  QWORD qwTSC;
+
+  qwTSC = kReadTSC();
+  kPrintf("Time Stamp Counter = %q\n", qwTSC);
+}
+
+/*
+  Check Processor speed
+*/
+void kMeasureProcessorSpeed(const char* pcParameterBuffer)
+{
+  int i;
+  QWORD qwLastTSC, qwTotalTSC = 0;
+
+  kPrintf("Now Measuring.");
+
+  // record total counter during 10 Sec
+  kDisableInterrupt();
+  for (i = 0; i < 200; i++)
+  {
+    qwLastTSC = kReadTSC();
+    kWaitUsingDirectPIT(MSTOCOUNT(50));
+    qwTotalTSC += kReadTSC() - qwLastTSC;
+
+    kPrintf(".");
+  }
+
+  // reset PIC default setting
+  kInitializePIT(MSTOCOUNT(1), TRUE);
+  kEnableInterrupt();
+
+  kPrintf("\nCPU Speed = %d MHz\n", qwTotalTSC / 10 / 1000 / 1000);
+}
+
+/*
+  print RTC Data & Time
+*/
+void kShowDateAndTime(const char* pcParameterBuffer)
+{
+  BYTE bSecond, bMinute, bHour;
+  BYTE bDayOfWeek, bDayOfMonth, bMonth;
+  WORD wYear;
+
+  // read RTC
+  kReadRTCTime(&bHour, &bMinute, &bSecond);
+  kReadRTCDate(&wYear, &bMonth, &bDayOfMonth, &bDayOfWeek);
+
+  kPrintf("Date: %d/%d/%d %s, ", wYear, bMonth, bDayOfMonth,
+    kConvertDayOfWeekToString(bDayOfWeek));
+  kPrintf("Time: %d:%d:%d\n", bHour, bMinute, bSecond);
 }

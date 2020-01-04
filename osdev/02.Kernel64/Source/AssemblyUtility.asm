@@ -4,6 +4,7 @@ SECTION .text	; define text segment
 
 global kInPortByte, kOutPortByte, kLoadGDTR, kLoadTR, kLoadIDTR
 global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
+global kReadTSC
 
 ; read from port one byte
 ; PARAM port_num
@@ -66,4 +67,17 @@ kDisableInterrupt:
 kReadRFLAGS:
   pushfq
   pop rax
+  ret
+
+; Read time stamp counter and return
+;   PARAM None
+kReadTSC:
+  push rdx
+
+  rdtsc
+
+  shl rdx, 32
+  or rax, rdx
+
+  pop rdx
   ret

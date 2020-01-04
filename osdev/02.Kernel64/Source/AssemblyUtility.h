@@ -14,4 +14,6 @@ void kEnableInterrupt(void);
 void kDisableInterrupt(void);
 QWORD kReadRFLAGS(void);
 
+QWORD kReadTSC(void);
+
 #endif /* __ASSEMBLYUTILITY_H__ */

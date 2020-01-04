@@ -104,7 +104,9 @@
     <ClCompile Include="02.Kernel64\Source\Keyborad.c" />
     <ClCompile Include="02.Kernel64\Source\Main.c" />
     <ClCompile Include="02.Kernel64\Source\PIC.c" />
+    <ClCompile Include="02.Kernel64\Source\PIT.c" />
     <ClCompile Include="02.Kernel64\Source\Queue.c" />
+    <ClCompile Include="02.Kernel64\Source\RTC.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
     <ClCompile Include="Makefile" />
@@ -134,7 +136,9 @@
     <ClInclude Include="02.Kernel64\Source\ISR.h" />
     <ClInclude Include="02.Kernel64\Source\Keyboard.h" />
     <ClInclude Include="02.Kernel64\Source\PIC.h" />
+    <ClInclude Include="02.Kernel64\Source\PIT.h" />
     <ClInclude Include="02.Kernel64\Source\Queue.h" />
+    <ClInclude Include="02.Kernel64\Source\RTC.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />
   </ItemGroup>
