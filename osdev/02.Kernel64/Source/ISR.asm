@@ -2,7 +2,7 @@
 
 SECTION .text	; define text segment
 
-extern kCommonExceptionHandler, kCommonInterruptHandler, kKeyboardHandler
+extern kCommonExceptionHandler, kCommonInterruptHandler, kKeyboardHandler, kTimerHandler
 
 ; Exception ISR
 global kISRDivideError, kISRDebug, kISRNMI, kISRBreakPoint, kISROverflow
@@ -312,7 +312,7 @@ kISRTimer:
     KSAVECONTEXT    
 
     mov rdi, 32
-    call kCommonInterruptHandler
+    call kTimerHandler
 
     KLOADCONTEXT    
     iretq           

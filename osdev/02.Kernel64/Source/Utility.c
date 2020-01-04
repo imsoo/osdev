@@ -1,6 +1,12 @@
 #include "Utility.h"
 #include "AssemblyUtility.h"
 
+// PIT Count
+volatile QWORD g_qwTickCount = 0;
+QWORD kGetTickCount(void) {
+  return g_qwTickCount;
+}
+
 void kMemSet(void* pvDestination, BYTE bData, int iSize)
 {
   int i;
