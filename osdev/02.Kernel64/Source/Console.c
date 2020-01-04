@@ -156,7 +156,7 @@ BYTE kGetCh(void)
     // wait 
     while (kGetKeyFromKeyQueue(&stData) == FALSE)
     {
-      ;
+      kSchedule();
     }
 
     // if key down

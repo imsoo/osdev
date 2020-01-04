@@ -47,7 +47,28 @@
 #define TASK_INVALIDID 0xFFFFFFFFFFFFFFFF
 
 // RR each task time (5ms)
-#define TASK_RPOCESSORTIME 5
+#define TASK_PROCESSORTIME 5
+
+// Multi Level Queue Scheduler
+#define TASK_MAXREADYLISTCOUNT 5
+
+// Task Priority
+#define TASK_FLAGS_HIGHEST 0
+#define TASK_FLAGS_HIGH 1
+#define TASK_FLAGS_MEDIUM 2
+#define TASK_FLAGS_LOW 3
+#define TASK_FLAGS_LOWEST 4
+
+#define TASK_FLAGS_WAIT 0xFF
+#define TASK_FLAGS_ENDTASK 0x8000000000000000
+#define TASK_FLAGS_IDLE 0x0800000000000000
+
+
+// using flags's lower 8 bit 
+#define GETPRIORITY(X) ((X) & 0xFF)
+#define SETPRIORITY(X, PRIOR) ((X) = ((X) & 0xFFFFFFFFFFFFFF00) | (PRIOR))
+#define GETTCBOFFSET(X) ((X) & 0xFFFFFFFF)
+
 
 #pragma pack(push, 1)
 
@@ -88,8 +109,20 @@ typedef struct kSchedulerStruct
   // remain tile
   int iProcessorTime;
 
-  // Task List
-  LIST stReadyList;
+  // Multi level Task List
+  LIST vstReadyList[TASK_MAXREADYLISTCOUNT];
+
+  // ready exit task list
+  LIST stWaitList;
+
+  // Each level execute count
+  int viExecuteCount[TASK_MAXREADYLISTCOUNT];
+
+  // processor spend time
+  QWORD qwProcessorLoad;
+
+  // Idle Task spend time
+  QWORD qwSpendProcessorTimeInIdleTask;
 } SCHEDULER;
 #pragma pack(pop)
 
@@ -104,12 +137,24 @@ void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvS
 // Schedule
 void kInitializeScheduler(void);
 void kSetRunningTask(TCB* pstTask);
+int kGetReadyTaskCount(void);
+int kGetTaskCount(void);
+TCB* kGetTCBInTCBPool(int iOffset);
 TCB* kGetRunningTask(void);
 TCB* kGetNextTaskToRun(void);
-void kAddTaskToReadyList(TCB* pstTask);
+BOOL kAddTaskToReadyList(TCB* pstTask);
+TCB* kRemoveTaskFromReadyList(QWORD qwTaskID);
 void kSchedule(void);
+BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority);
 BOOL kScheduleInInterrupt(void);
 void kDecreaseProcessorTime(void);
 BOOL kIsProcessorTimeExpired(void);
+BOOL kEndTask(QWORD qwTaskID);
+void kExitTask(void);
+BOOL kIsTaskExist(QWORD qwID);
+QWORD kGetProcessorLoad(void);
 
+// idle task
+void kIdleTask(void);
+void kHaltProcessorByLoad(void);
 #endif // !__TASK_H__

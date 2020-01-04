@@ -32,7 +32,7 @@ BOOL kIsInputBufferFull(void)
 }
 
 /*
-  waiting ACK, other scancodes put KeyQueue
+  ready ACK, other scancodes put KeyQueue
 */
 BOOL kWaitForAckAndPutOtherScanCode(void)
 {

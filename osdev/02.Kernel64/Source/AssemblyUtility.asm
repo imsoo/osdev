@@ -8,7 +8,7 @@ global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 global kReadTSC
 
 ; Task
-global kSwitchContext
+global kSwitchContext, kHlt
 
 ; read from port one byte
 ; PARAM port_num
@@ -200,3 +200,10 @@ kSwitchContext:
 
   KLOADCONTEXT
   iretq
+
+; Processor to ready state
+;   PARAM None
+kHlt:
+  hlt
+  hlt
+  ret
