@@ -13,6 +13,8 @@
 
 #pragma pack(push, 1)
 
+#define offsetof(TYPE, MEMBER) __builtin_offsetof(TYPE, MEMBER)
+
 // for video print
 typedef struct kCharactorStruct
 {

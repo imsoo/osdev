@@ -19,7 +19,7 @@ typedef struct kListManagerStruct {
 #pragma pack(pop)
 
 // fucntion
-void kInitalizeList(LIST* pstList);
+void kInitializeList(LIST* pstList);
 int kGetListCount(const LIST* pstList);
 void kAddListToTail(LIST* pstList, void* pvItem);
 void kAddListToHeader(LIST* pstList, void* pvItem);

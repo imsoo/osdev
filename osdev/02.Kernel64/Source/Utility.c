@@ -7,6 +7,17 @@ QWORD kGetTickCount(void) {
   return g_qwTickCount;
 }
 
+// wait millisecond
+void kSleep(QWORD qwMillisecond)
+{
+  QWORD qwLastTickCount;
+  qwLastTickCount = g_qwTickCount;
+
+  while ((g_qwTickCount - qwLastTickCount) <= qwMillisecond) {
+    kSchedule();
+  }
+}
+
 void kMemSet(void* pvDestination, BYTE bData, int iSize)
 {
   int i;

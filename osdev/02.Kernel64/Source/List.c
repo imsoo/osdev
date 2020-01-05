@@ -3,7 +3,7 @@
 /*
   Init List
 */
-void kInitalizeList(LIST* pstList)
+void kInitializeList(LIST* pstList)
 {
   pstList->iItemCount = 0;
   pstList->pvHeader = NULL;
