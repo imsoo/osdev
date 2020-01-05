@@ -124,7 +124,11 @@ TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD
   pvStackAddress = (void*)(TASK_STACKPOOLADDRESS + (TASK_STACKSIZE * (GETTCBOFFSET(pstTask->stLink.qwID))));
   kSetUpTask(pstTask, qwFlags, qwEntryPointAddress, pvStackAddress, TASK_STACKSIZE);
 
+  // init Child Thread List
   kInitializeList(&(pstTask->stChildThreadList));
+
+  // Init FPU
+  pstTask->bFPUUsed = FALSE;
 
   // --- CRITCAL SECTION BEGIN ---
   bPreviousFlag = kLockForSystemData();
@@ -205,6 +209,7 @@ void kInitializeScheduler(void)
 
   gs_stScheduler.qwSpendProcessorTimeInIdleTask = 0;
   gs_stScheduler.qwProcessorLoad = 0;
+  gs_stScheduler.qwLastFPUUsedTaskID = TASK_INVALIDID;
 }
 
 /*
@@ -471,6 +476,15 @@ void kSchedule(void)
     gs_stScheduler.qwSpendProcessorTimeInIdleTask += (TASK_PROCESSORTIME - gs_stScheduler.iProcessorTime);
   }
 
+  // if Next Task is not last FPU used Task, Set TS bit for reload or init  
+  if (gs_stScheduler.qwLastFPUUsedTaskID != pstNextTask->stLink.qwID) {
+    kSetTS();
+  }
+  // Next Task is last FPU used Task, Clear TS bit for
+  else {
+    kClearTS();
+  }
+
   // Processor time assign
   gs_stScheduler.iProcessorTime = TASK_PROCESSORTIME;
 
@@ -535,6 +549,15 @@ BOOL kScheduleInInterrupt(void)
 
   kUnlockForSystemData(bPreviousFlag);
   // --- CRITCAL SECTION END ---
+
+  // if Next Task is not last FPU used Task, Set TS bit for reload or init  
+  if (gs_stScheduler.qwLastFPUUsedTaskID != pstNextTask->stLink.qwID) {
+    kSetTS();
+  }
+  // Next Task is last FPU used Task, Clear TS bit for
+  else {
+    kClearTS();
+  }
 
   kMemCpy(pcContextAddress, &(pstNextTask->stContext), sizeof(CONTEXT));
 
@@ -753,4 +776,20 @@ static TCB* kGetProcessByThread(TCB* pstThread)
     return NULL;
   }
   return pstProcess;
+}
+
+/*
+  Get Last Used FPU Task ID
+*/
+QWORD kGetLastFPUUsedTaskID(void)
+{
+  return gs_stScheduler.qwLastFPUUsedTaskID;
+}
+
+/*
+  Set Last Used FPU Task ID
+*/
+void kSetLastFPUUsedTaskID(QWORD qwTaskID)
+{
+  gs_stScheduler.qwLastFPUUsedTaskID = qwTaskID;
 }

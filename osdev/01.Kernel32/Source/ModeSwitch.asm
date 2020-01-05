@@ -44,9 +44,10 @@ kReadCPUID:
 ; Switch to IA-32e mode and run 64 bit kernel
 ;   PARAM: None
 kSwitchAndExecute64bitKernel:
-  ; set CR4 PAE bit (bit 5)
+  ; set CR4 PAE bit (bit 5), 
+  ; For FPU : OSXMMECPT (bit 10), OSFXSR (bit 9)
   mov eax, cr4
-  or eax, 0x20
+  or eax, 0x620
   mov cr4, eax
 
   ; set CR3 PML4 table addr and enable cache
@@ -61,9 +62,10 @@ kSwitchAndExecute64bitKernel:
 
   ; CR0 NW(29) = 0, CD(30) = 0, PG(31) = 1
   ; cache, paging enable
+  ; For FPU : TS(3) = 1, EM(2) = 0, MP(1) = 1
   mov eax, cr0
-  or eax, 0xE0000000  ; set NW, CD, PG
-  xor eax, 0x60000000 ; clear NW, CD
+  or eax, 0xE000000E  ; set NW, CD, PG, TS, EM, MP
+  xor eax, 0x60000004 ; clear NW, CD, EM
   mov cr0, eax
 
   ; run 64 bit kernel

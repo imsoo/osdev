@@ -361,12 +361,13 @@ int kSPrintf(char* pcBuffer, const char* pcFormatString, ...)
 */
 int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap)
 {
-  QWORD i, j;
+  QWORD i, j, k;
   int iBufferIndex = 0;
   int iFormatLength, iCopyLength;
   char* pcCopyString;
   QWORD qwValue;
   int iValue;
+  double dValue;
 
   // read format string and return result string
   iFormatLength = kStrLen(pcFormatString);
@@ -422,6 +423,32 @@ int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap)
         iBufferIndex += kIToA(qwValue, pcBuffer + iBufferIndex, 16);
         break;
 
+        // float 
+      case 'f':
+        dValue = (double)(va_arg(ap, double));
+
+        // round up
+        dValue += 0.005;
+
+        pcBuffer[iBufferIndex] = '0' + (QWORD)(dValue * 100) % 10;
+        pcBuffer[iBufferIndex + 1] = '0' + (QWORD)(dValue * 10) % 10;
+        pcBuffer[iBufferIndex + 2] = '.';
+        for (k = 0; ; k++)
+        {
+          // 0
+          if (((QWORD)dValue == 0) && (k != 0))
+          {
+            break;
+          }
+          pcBuffer[iBufferIndex + 3 + k] = '0' + ((QWORD)dValue % 10);
+          dValue = dValue / 10;
+        }
+        pcBuffer[iBufferIndex + 3 + k] = '\0';
+
+        // reverse
+        kReverseString(pcBuffer + iBufferIndex);
+        iBufferIndex += 3 + k;
+        break;
 
       default:
         // copy char and move 1

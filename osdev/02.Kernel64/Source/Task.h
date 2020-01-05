@@ -91,13 +91,17 @@ typedef struct kTaskControlBlockStruct {
   void* pvMemoryAddress;
   QWORD qwMemorySize;
 
-  // --- THREAD 
+  // --- Next THREAD Link
   LISTLINK stThreadLink;
   
-  LIST stChildThreadList;
-
+  // Parent Process ID
   QWORD qwParentProcessID;
-  // --- THREAD
+
+  // FPU Context
+  QWORD vqwFPUContex[512 / 8];
+
+  // --- Child THREAD List
+  LIST stChildThreadList;
 
   // Context
   CONTEXT stContext;
@@ -105,6 +109,12 @@ typedef struct kTaskControlBlockStruct {
   // stack
   void* pvStackAddress;
   QWORD qwStackSize;
+
+  // FPU Use
+  BOOL bFPUUsed;
+
+
+  char vcPadding[11];
 } TCB;
 
 typedef struct kTCBPoolManagerStruct
@@ -139,6 +149,10 @@ typedef struct kSchedulerStruct
 
   // Idle Task spend time
   QWORD qwSpendProcessorTimeInIdleTask;
+
+  // Last Used FPU Task ID 
+  QWORD qwLastFPUUsedTaskID;
+
 } SCHEDULER;
 #pragma pack(pop)
 
@@ -176,4 +190,9 @@ void kHaltProcessorByLoad(void);
 
 // Thread
 static TCB* kGetProcessByThread(TCB* pstThread);
+
+// FPU
+QWORD kGetLastFPUUsedTaskID(void);
+void kSetLastFPUUsedTaskID(QWORD qwTaskID);
+
 #endif // !__TASK_H__

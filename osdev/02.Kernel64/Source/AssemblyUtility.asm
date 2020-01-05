@@ -10,6 +10,9 @@ global kReadTSC
 ; Task
 global kSwitchContext, kHlt, kTestAndSet
 
+; FPU
+global kInitializeFPU, kSaveFPUContext, kLoadFPUContext, kSetTS, kClearTS
+
 ; read from port one byte
 ; PARAM port_num
 kInPortByte:
@@ -222,4 +225,40 @@ kTestAndSet:
 
 .SUCCESS: ; Destination and Compare are same
   mov rax, 0x01
+  ret
+
+; Init FPU
+;   PARAM : None
+kInitializeFPU:
+  finit
+  ret
+
+; Save FPU Context to rdi
+;   PARAM : Buffer Address(rdi)
+kSaveFPUContext:
+  fxsave [rdi]
+  ret
+
+; Load FPU Context to rdi
+;   PARAM : Buffer Address(rdi)
+kLoadFPUContext:
+  fxrstor [rdi]
+  ret
+
+; Set TS Bit(7) in CR0 
+;   PARAM : None
+kSetTS:
+  push rax
+
+  mov rax, cr0
+  or rax, 0x08
+  mov cr0, rax
+
+  pop rax
+  ret
+
+; Clear TS Bit(1) in CR0 
+;   PARAM : None
+kClearTS:
+  clts
   ret
