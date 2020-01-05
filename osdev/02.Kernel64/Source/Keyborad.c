@@ -2,6 +2,7 @@
 #include "AssemblyUtility.h"
 #include "Keyboard.h"
 #include "Queue.h"
+#include "Synchronization.h"
 
 /*
   About Control Keyboard
@@ -511,12 +512,15 @@ BOOL kConvertScanCodeAndPutQueue(BYTE bScanCode)
   stData.bScanCode = bScanCode;
 
   if (kConvertScanCodeToASCIICode(bScanCode, &(stData.bASCIICode), &(stData.bFlags)) == TRUE) {
-    bPreviousInterrupt = kSetInterruptFlag(FALSE);
+    
+    // --- CRITCAL SECTION BEGIN ---
+    bPreviousInterrupt = kLockForSystemData();
 
     // Put into KeyQueue
     bResult = kPutQueue(&gs_stKeyQueue, &stData);
 
-    kSetInterruptFlag(bPreviousInterrupt);
+    kUnlockForSystemData(bPreviousInterrupt);
+    // --- CRITCAL SECTION END ---
   }
 
   return bResult;
@@ -533,12 +537,14 @@ BOOL kGetKeyFromKeyQueue(KEYDATA *pstData)
   if (kIsQueueEmpty(&gs_stKeyQueue) == TRUE)
     return FALSE;
 
-  bPreviousInterrupt = kSetInterruptFlag(FALSE);
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousInterrupt = kLockForSystemData();
 
   // Get from KeyQueue
   bResult = kGetQueue(&gs_stKeyQueue, pstData);
 
-  kSetInterruptFlag(bPreviousInterrupt);
+  kUnlockForSystemData(bPreviousInterrupt);
+  // --- CRITCAL SECTION END ---
 
   return bResult;
 }

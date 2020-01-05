@@ -8,7 +8,7 @@ global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 global kReadTSC
 
 ; Task
-global kSwitchContext, kHlt
+global kSwitchContext, kHlt, kTestAndSet
 
 ; read from port one byte
 ; PARAM port_num
@@ -206,4 +206,20 @@ kSwitchContext:
 kHlt:
   hlt
   hlt
+  ret
+
+; compare Destination and Compare, then if same, assign source
+;   PARAM Destination(rdi), Compare(rsi), Source(rdx)
+kTestAndSet:
+  mov rax, rsi  
+
+  lock cmpxchg byte[rdi], dl
+  je .SUCCESS
+
+.NOTSAME: ; Destination and Compare are diff
+  mov rax, 0x00
+  ret
+
+.SUCCESS: ; Destination and Compare are same
+  mov rax, 0x01
   ret

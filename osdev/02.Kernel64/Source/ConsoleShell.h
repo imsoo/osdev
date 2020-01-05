@@ -40,14 +40,14 @@ void kExecuteCommand(const char* pcCommandBuffer);
 void kInitializeParameter(PARAMETERLIST* pstList, const char* pcParameter);
 int kGetNextParameter(PARAMETERLIST* pstList, char* pcParameter);
 
-// command function
+// command function (static)
 static void kHelp(const char* pcParameterBuffer);
 static void kCls(const char* pcParameterBuffer);
 static void kShowTotalRAMSize(const char* pcParameterBuffer);
 static void kStringToDecimalHexTest(const char* pcParameterBuffer);
 static void kShutDown(const char* pcParameterBuffer);
 
-// command (PIT, RCT)
+// PIT, RCT
 static void kSetTimer(const char* pcParameterBuffer);
 static void kWaitUsingPIT(const char* pcParameterBuffer);
 static void kReadTimeStampCounter(const char* pcParameterBuffer);
@@ -60,5 +60,8 @@ static void kChangeTaskPriority(const char* pcParameterBuffer);
 static void kShowTaskList(const char* pcParameterBuffer);
 static void kKillTask(const char* pcParameterBuffer);
 static void kCPULoad(const char* pcParameterBuffer);
+
+// Mutex
+static void kTestMutex(const char* pcParameterBuffer);
 
 #endif // __CONSOLESHELL_H__

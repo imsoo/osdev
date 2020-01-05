@@ -126,13 +126,13 @@ typedef struct kSchedulerStruct
 } SCHEDULER;
 #pragma pack(pop)
 
-// function
+// function (static function : internal use)
 // Task
-void kInitializeTCBPOOL(void);
-TCB* kAllocateTCB(void);
-void kFreeTCB(QWORD qwID);
+static void kInitializeTCBPOOL(void);
+static TCB* kAllocateTCB(void);
+static void kFreeTCB(QWORD qwID);
+static void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvStackAddress, QWORD qwStackSize);
 TCB* kCreateTask(QWORD qwFlags, QWORD qwEntryPointAddress);
-void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvStackAddress, QWORD qwStackSize);
 
 // Schedule
 void kInitializeScheduler(void);
@@ -141,9 +141,9 @@ int kGetReadyTaskCount(void);
 int kGetTaskCount(void);
 TCB* kGetTCBInTCBPool(int iOffset);
 TCB* kGetRunningTask(void);
-TCB* kGetNextTaskToRun(void);
-BOOL kAddTaskToReadyList(TCB* pstTask);
-TCB* kRemoveTaskFromReadyList(QWORD qwTaskID);
+static TCB* kGetNextTaskToRun(void);
+static BOOL kAddTaskToReadyList(TCB* pstTask);
+static TCB* kRemoveTaskFromReadyList(QWORD qwTaskID);
 void kSchedule(void);
 BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority);
 BOOL kScheduleInInterrupt(void);

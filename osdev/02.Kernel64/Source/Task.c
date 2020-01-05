@@ -9,7 +9,7 @@ static TCBPOOLMANAGER gs_stTCBPoolManager;
 /*
   Init TCB Pool
 */
-void kInitializeTCBPOOL(void)
+static void kInitializeTCBPOOL(void)
 {
   int i;
   // Init Mem
@@ -30,7 +30,7 @@ void kInitializeTCBPOOL(void)
 /*
   Allocate TCB from TCB Pool
 */
-TCB* kAllocateTCB(void)
+static TCB* kAllocateTCB(void)
 {
   TCB* pstEmptyTCB;
   int i;
@@ -61,7 +61,7 @@ TCB* kAllocateTCB(void)
 /*
   Free TCB to TCB Pool
 */
-void kFreeTCB(QWORD qwID)
+static void kFreeTCB(QWORD qwID)
 {
   int i;
 
@@ -80,15 +80,31 @@ TCB* kCreateTask(QWORD qwFlags, QWORD qwEntryPointAddress)
 {
   TCB* pstTask;
   void* pvStackAddress;
+  BOOL bPreviousFlag;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
 
   pstTask = kAllocateTCB();
   if (pstTask == NULL) {
+    kUnlockForSystemData(bPreviousFlag);
+    // --- CRITCAL SECTION END ---
     return NULL;
   }
 
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
+
   pvStackAddress = (void*)(TASK_STACKPOOLADDRESS + (TASK_STACKSIZE * (GETTCBOFFSET(pstTask->stLink.qwID))));
   kSetUpTask(pstTask, qwFlags, qwEntryPointAddress, pvStackAddress, TASK_STACKSIZE);
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
+
   kAddTaskToReadyList(pstTask);
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
 
   return pstTask;
 }
@@ -96,7 +112,7 @@ TCB* kCreateTask(QWORD qwFlags, QWORD qwEntryPointAddress)
 /*
   set up Task
 */
-void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvStackAddress, QWORD qwStackSize)
+static void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvStackAddress, QWORD qwStackSize)
 {
   kMemSet(pstTCB->stContext.vqRegister, 0, sizeof(pstTCB->stContext.vqRegister));
 
@@ -157,7 +173,15 @@ void kInitializeScheduler(void)
 */
 void kSetRunningTask(TCB* pstTask)
 {
+  BOOL bPreviousFlag;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
+
   gs_stScheduler.pstRunningTask = pstTask;
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
 }
 
 /*
@@ -165,13 +189,24 @@ void kSetRunningTask(TCB* pstTask)
 */
 TCB* kGetRunningTask(void)
 {
-  return gs_stScheduler.pstRunningTask;
+  BOOL bPreviousFlag;
+  TCB* pstRunningTask;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
+
+  pstRunningTask = gs_stScheduler.pstRunningTask;
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
+
+  return pstRunningTask;
 }
 
 /*
   Get Next Task TCB from multi level ready task list
 */
-TCB* kGetNextTaskToRun(void)
+static TCB* kGetNextTaskToRun(void)
 {
   TCB* pstTarget = NULL;
   int iTaskCount, i, j;
@@ -201,7 +236,7 @@ TCB* kGetNextTaskToRun(void)
 /*
   Add Task TCB to Multi level ready task list
 */
-BOOL kAddTaskToReadyList(TCB* pstTask)
+static BOOL kAddTaskToReadyList(TCB* pstTask)
 {
   BYTE bPriority;
 
@@ -218,7 +253,7 @@ BOOL kAddTaskToReadyList(TCB* pstTask)
 /*
   Remove Task TCB from Multi level ready task list
 */
-TCB* kRemoveTaskFromReadyList(QWORD qwTaskID)
+static TCB* kRemoveTaskFromReadyList(QWORD qwTaskID)
 {
   TCB* pstTarget;
   BYTE bPriority;
@@ -245,11 +280,15 @@ TCB* kRemoveTaskFromReadyList(QWORD qwTaskID)
 BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority)
 {
   TCB* pstTarget;
+  BOOL bPreviousFlag;
 
   // invalid task priority
   if (bPriority > TASK_MAXREADYLISTCOUNT) {
     return FALSE;
   }
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
 
   // if target is running task, set prioirty
   pstTarget = gs_stScheduler.pstRunningTask;
@@ -276,6 +315,10 @@ BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority)
       kAddTaskToReadyList(pstTarget);
     }
   }
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
+
   return TRUE;
 }
 
@@ -286,10 +329,18 @@ int kGetReadyTaskCount(void)
 {
   int iTotalCount = 0;
   int i;
+  BOOL bPreviousFlag;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
 
   for (i = 0; i < TASK_MAXREADYLISTCOUNT; i++) {
     iTotalCount += kGetListCount(&(gs_stScheduler.vstReadyList[i]));
   }
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
+
   return iTotalCount;
 }
 
@@ -299,9 +350,19 @@ int kGetReadyTaskCount(void)
 int kGetTaskCount(void)
 {
   int iTotalCount = 0;
+  BOOL bPreviousFlag;
 
   iTotalCount = kGetReadyTaskCount();
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
+
   iTotalCount += kGetListCount(&(gs_stScheduler.stWaitList)) + 1;
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
+
+  return iTotalCount;
 }
 
 /*
@@ -309,7 +370,7 @@ int kGetTaskCount(void)
 */
 TCB* kGetTCBInTCBPool(int iOffset)
 {
-  if ((iOffset < -1) && (iOffset > TASK_MAXCOUNT))
+  if ((iOffset < -1) || (iOffset > TASK_MAXCOUNT))
     return NULL;
 
   return &(gs_stTCBPoolManager.pstStartAddress[iOffset]);
@@ -350,11 +411,14 @@ void kSchedule(void)
   if (kGetReadyTaskCount() < 1)
     return;
 
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
+
   // get next task
-  bPreviousFlag = kSetInterruptFlag(FALSE);
   pstNextTask = kGetNextTaskToRun();
   if (pstNextTask == NULL) {
-    kSetInterruptFlag(bPreviousFlag);
+    kUnlockForSystemData(bPreviousFlag);
+    // --- CRITCAL SECTION END ---
     return;
   }
 
@@ -366,6 +430,9 @@ void kSchedule(void)
   if ((pstRunningTask->qwFlags & TASK_FLAGS_IDLE) == TASK_FLAGS_IDLE) {
     gs_stScheduler.qwSpendProcessorTimeInIdleTask += TASK_PROCESSORTIME - gs_stScheduler.iProcessorTime;
   }
+
+  // Processor time assign
+  gs_stScheduler.iProcessorTime = TASK_PROCESSORTIME;
 
   // if running task end, move to wait list
   if (pstRunningTask->qwFlags & TASK_FLAGS_ENDTASK) {
@@ -380,11 +447,8 @@ void kSchedule(void)
     kSwitchContext(&(pstRunningTask->stContext), &(pstNextTask->stContext));
   }
 
-  // Processor time assign
-  gs_stScheduler.iProcessorTime = TASK_PROCESSORTIME;
-
-
-  kSetInterruptFlag(bPreviousFlag);
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
 }
 
 /*
@@ -394,11 +458,18 @@ BOOL kScheduleInInterrupt(void)
 {
   TCB* pstRunningTask, *pstNextTask;
   char* pcContextAddress;
+  BOOL bPreviousFlag;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
 
   // nothing ready Task
   pstNextTask = kGetNextTaskToRun();
-  if (pstNextTask == NULL)
+  if (pstNextTask == NULL) {
+    kUnlockForSystemData(bPreviousFlag);
+    // --- CRITCAL SECTION END ---
     return FALSE;
+  }
 
   pcContextAddress = (char*)IST_STARTADDRESS + IST_SIZE - sizeof(CONTEXT);
 
@@ -421,6 +492,9 @@ BOOL kScheduleInInterrupt(void)
     kMemCpy(&(pstRunningTask->stContext), pcContextAddress, sizeof(CONTEXT));
     kAddTaskToReadyList(pstRunningTask);
   }
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
 
   kMemCpy(pcContextAddress, &(pstNextTask->stContext), sizeof(CONTEXT));
 
@@ -453,12 +527,19 @@ BOOL kEndTask(QWORD qwTaskID)
 {
   TCB* pstTarget;
   BYTE bPriority;
+  BOOL bPreviousFlag;
+
+  // --- CRITCAL SECTION BEGIN ---
+  bPreviousFlag = kLockForSystemData();
 
   // if task is running task
   pstTarget = gs_stScheduler.pstRunningTask;
   if (pstTarget->stLink.qwID == qwTaskID) {
     pstTarget->qwFlags |= TASK_FLAGS_ENDTASK;
     SETPRIORITY(pstTarget->qwFlags, TASK_FLAGS_WAIT);
+
+    kUnlockForSystemData(bPreviousFlag);
+    // --- CRITCAL SECTION END ---
 
     kSchedule();
 
@@ -475,9 +556,9 @@ BOOL kEndTask(QWORD qwTaskID)
         pstTarget->qwFlags |= TASK_FLAGS_ENDTASK;
         SETPRIORITY(pstTarget->qwFlags, TASK_FLAGS_WAIT);
       }
-      else {
-        return FALSE;
-      }
+      kUnlockForSystemData(bPreviousFlag);
+      // --- CRITCAL SECTION END ---
+      return TRUE;
     }
     // if task in ready list, pop task, set priority, push wait list
     else {
@@ -486,6 +567,9 @@ BOOL kEndTask(QWORD qwTaskID)
       kAddListToTail(&(gs_stScheduler.stWaitList), pstTarget);
     }
   }
+
+  kUnlockForSystemData(bPreviousFlag);
+  // --- CRITCAL SECTION END ---
   return TRUE;
 }
 
@@ -506,13 +590,15 @@ void kIdleTask(void)
   TCB* pstTask;
   QWORD qwLastMeasureTickCount, qwLastSpendTickInIdleTask;
   QWORD qwCurrentMeasureTickCount, qwCurrentSpendTickInIdleTask;
+  BOOL bPreviousFlag;
+  QWORD qwTaskID;
 
   qwLastSpendTickInIdleTask = gs_stScheduler.qwSpendProcessorTimeInIdleTask;
   qwLastMeasureTickCount = kGetTickCount();
 
   while (1) {
-    qwCurrentSpendTickInIdleTask = gs_stScheduler.qwSpendProcessorTimeInIdleTask;
     qwCurrentMeasureTickCount = kGetTickCount();
+    qwCurrentSpendTickInIdleTask = gs_stScheduler.qwSpendProcessorTimeInIdleTask;
 
     if ((qwCurrentMeasureTickCount - qwLastMeasureTickCount) == 0) {
       gs_stScheduler.qwProcessorLoad = 0;
@@ -532,12 +618,23 @@ void kIdleTask(void)
     // free wait task 
     if (kGetListCount(&(gs_stScheduler.stWaitList)) >= 0) {
       while (1) {
+        // --- CRITCAL SECTION BEGIN ---
+        bPreviousFlag = kLockForSystemData();
+
         pstTask = kRemoveListFromHeader(&(gs_stScheduler.stWaitList));
         if (pstTask == NULL) {
+
+          kUnlockForSystemData(bPreviousFlag);
+          // --- CRITCAL SECTION END ---
+
           break;
         }
+        qwTaskID = pstTask->stLink.qwID;
+        kFreeTCB(qwTaskID);
+
+        kUnlockForSystemData(bPreviousFlag);
+        // --- CRITCAL SECTION END ---
         kPrintf("IDLE: Task ID[0x%q] is completely ended.\n", pstTask->stLink.qwID);
-        kFreeTCB(pstTask->stLink.qwID);
       }
     }
 

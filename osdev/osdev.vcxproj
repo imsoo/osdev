@@ -108,6 +108,7 @@
     <ClCompile Include="02.Kernel64\Source\PIT.c" />
     <ClCompile Include="02.Kernel64\Source\Queue.c" />
     <ClCompile Include="02.Kernel64\Source\RTC.c" />
+    <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
@@ -142,6 +143,7 @@
     <ClInclude Include="02.Kernel64\Source\PIT.h" />
     <ClInclude Include="02.Kernel64\Source\Queue.h" />
     <ClInclude Include="02.Kernel64\Source\RTC.h" />
+    <ClInclude Include="02.Kernel64\Source\Synchronization.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />
