@@ -6,6 +6,7 @@
 #include "Task.h"
 #include "Descriptor.h"
 #include "AssemblyUtility.h"
+#include "HardDisk.h"
 
 /*
   Common Exception Handler
@@ -143,4 +144,32 @@ void kDeviceNotAvailableHandler(int iVectorNumber)
   }
 
   kSetLastFPUUsedTaskID(pstCurrentTask->stLink.qwID);
+}
+
+
+/*
+  HDD Handler
+*/
+void kHDDHandler(int iVectorNumber)
+{
+  char vcBuffer[] = "[INT:  , ]";
+  static int g_iHDDInterruptCount = 0;
+
+  vcBuffer[5] = '0' + iVectorNumber / 10;
+  vcBuffer[6] = '0' + iVectorNumber % 10;
+
+  vcBuffer[8] = '0' + g_iHDDInterruptCount;
+  g_iHDDInterruptCount = (g_iHDDInterruptCount + 1) % 10;
+  kPrintStringXY(10, 0, vcBuffer);
+
+  // 14 Primary PATA
+  if (iVectorNumber - PIC_IRQSTARTVECTOR == 14) {
+    kSetHDDInterruptFlag(TRUE, TRUE);
+  }
+  // 15 Second PATA
+  else if (iVectorNumber - PIC_IRQSTARTVECTOR == 15) {
+    kSetHDDInterruptFlag(FALSE, TRUE);
+  }
+  // EOI Send
+  kSendEOIToPIC(iVectorNumber - PIC_IRQSTARTVECTOR);
 }

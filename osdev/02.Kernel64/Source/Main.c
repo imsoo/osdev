@@ -7,6 +7,7 @@
 #include "Task.h"
 #include "PIT.h"
 #include "DynamicMemory.h"
+#include "HardDisk.h"
 
 // C Kernel 
 void Main(void)
@@ -42,13 +43,13 @@ void Main(void)
   kSetCursor(45, iCursorY++);
   kPrintf("Pass], Size = %dMB\n", kGetTotalRAMSize());
 
-  kPrintf("TCB Pool And Scheduler Initialize...........[PASS]\n");
+  kPrintf("TCB Pool And Scheduler Initialize...........[Pass]\n");
   iCursorY++;
   kInitializeScheduler();
   // set PIT 1ms
   kInitializePIT(MSTOCOUNT(1), 0);
 
-  kPrintf("Dynamic MEmory Initialize...................[PASS]\n");
+  kPrintf("Dynamic MEmory Initialize...................[Pass]\n");
   iCursorY++;
   kInitializeDynamicMemory();
 
@@ -75,6 +76,16 @@ void Main(void)
   kEnableInterrupt();
   kSetCursor(45, iCursorY++);
   kPrintf("Pass\n");
+
+  kPrintf("HDD Initialize..............................[    ]");
+  if (kInitializeHDD() == TRUE) {
+    kSetCursor(45, iCursorY++);
+    kPrintf("Pass\n");
+  }
+  else {
+    kSetCursor(45, iCursorY++);
+    kPrintf("Fail\n");
+  }
 
   // idle task start
   kCreateTask(TASK_FLAGS_LOWEST | TASK_FLAGS_THREAD | TASK_FLAGS_SYSTEM | TASK_FLAGS_IDLE, 0, 0, (QWORD)kIdleTask);

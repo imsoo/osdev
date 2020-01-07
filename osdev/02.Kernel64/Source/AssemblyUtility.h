@@ -4,8 +4,13 @@
 #include "Types.h"
 #include "Task.h"
 
+// Read from Port
 BYTE kInPortByte(WORD wPort);
+WORD kInPortWord(WORD wPort);
+
+// Write to Port
 void kOutPortByte(WORD wPort, BYTE bData);
+void kOutPortWord(WORD wPort, WORD wData);
 
 void kLoadGDTR(QWORD qwGDTRAddress);
 void kLoadTR(WORD wTSSSegmentOffset);

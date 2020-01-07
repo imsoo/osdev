@@ -1,8 +1,6 @@
 #include "DynamicMemory.h"
 #include "Utility.h"
 #include "Task.h"
-#include "Console.h" // temp
-
 static DYNAMICMEMORY gs_stDynamicMemory;
 
 void kInitializeDynamicMemory(void)
