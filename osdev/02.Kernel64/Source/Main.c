@@ -8,6 +8,7 @@
 #include "PIT.h"
 #include "DynamicMemory.h"
 #include "HardDisk.h"
+#include "FileSystem.h"
 
 // C Kernel 
 void Main(void)
@@ -77,8 +78,20 @@ void Main(void)
   kSetCursor(45, iCursorY++);
   kPrintf("Pass\n");
 
+  // Init HDD device Controller
   kPrintf("HDD Initialize..............................[    ]");
   if (kInitializeHDD() == TRUE) {
+    kSetCursor(45, iCursorY++);
+    kPrintf("Pass\n");
+  }
+  else {
+    kSetCursor(45, iCursorY++);
+    kPrintf("Fail\n");
+  }
+
+  // Init FileSystem
+  kPrintf("File System Initialize......................[    ]");
+  if (kInitializeFileSystem() == TRUE) {
     kSetCursor(45, iCursorY++);
     kPrintf("Pass\n");
   }

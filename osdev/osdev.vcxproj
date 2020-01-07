@@ -101,6 +101,7 @@
     <ClCompile Include="02.Kernel64\Source\ConsoleShell.c" />
     <ClCompile Include="02.Kernel64\Source\Descriptor.c" />
     <ClCompile Include="02.Kernel64\Source\DynamicMemory.c" />
+    <ClCompile Include="02.Kernel64\Source\FileSystem.c" />
     <ClCompile Include="02.Kernel64\Source\HardDisk.c" />
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\Keyborad.c" />
@@ -138,6 +139,7 @@
     <ClInclude Include="02.Kernel64\Source\ConsoleShell.h" />
     <ClInclude Include="02.Kernel64\Source\Descriptor.h" />
     <ClInclude Include="02.Kernel64\Source\DynamicMemory.h" />
+    <ClInclude Include="02.Kernel64\Source\FileSystem.h" />
     <ClInclude Include="02.Kernel64\Source\HardDisk.h" />
     <ClInclude Include="02.Kernel64\Source\InterruptHandler.h" />
     <ClInclude Include="02.Kernel64\Source\ISR.h" />

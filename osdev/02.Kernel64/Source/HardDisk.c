@@ -268,7 +268,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     (iSectorCount <= 0) || (256 < iSectorCount) ||
     ((dwLBA + iSectorCount) >= gs_stHDDManager.stHDDInformation.dwTotalSectors))
   {
-    return 0;
+    return FALSE;
   }
 
   // Select Port (Primary, Second)
@@ -291,7 +291,6 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     kUnlock(&(gs_stHDDManager.stMutex));
     return FALSE;
   }
-
 
   // Sector Count to Read
   kOutPortByte(wPortBase + HDD_PORT_INDEX_SECTORCOUNT, iSectorCount);
@@ -336,7 +335,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
       kPrintf("Error Occur\n");
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return i;
+      return FALSE;
     }
 
     // Check DATAREQUEST Bit
@@ -365,7 +364,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
 
   kUnlock(&(gs_stHDDManager.stMutex));
   // --- CRITCAL SECTION END ---
-  return i;
+  return TRUE;
 }
 
 /*
@@ -388,7 +387,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     ((dwLBA + iSectorCount) >= gs_stHDDManager.stHDDInformation.dwTotalSectors))
 
   {
-    return 0;
+    return FALSE;
   }
 
   // Select Port (Primary, Second)
@@ -448,7 +447,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     {
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return 0;
+      return FALSE;
     }
 
     // Check DATAREQUEST Bit
@@ -477,7 +476,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     {
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return i;
+      return FALSE;
     }
 
     // Check DATAREQUEST Bit
@@ -497,5 +496,5 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
   }
   kUnlock(&(gs_stHDDManager.stMutex));
   // --- CRITCAL SECTION END ---
-  return i;
+  return TRUE;
 }

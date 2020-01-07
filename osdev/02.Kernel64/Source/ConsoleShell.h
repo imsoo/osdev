@@ -67,8 +67,9 @@ static void kTestMutex(const char* pcParameterBuffer);
 // Thread
 static void kCreateThreadTask(void);
 static void kTestThread(const char* pcParameterBuffer);
-
 static void kShowMatrix(const char* pcParameterBuffer);
+
+// FPU
 static void kTestPIE(const char* pcParameterBuffer);
 
 // Dynamic Memory
@@ -81,5 +82,13 @@ static void kRandomAllocationTask(void);
 static void kShowHDDInformation(const char* pcParameterBuffer);
 static void kReadSector(const char* pcParameterBuffer);
 static void kWriteSector(const char* pcParameterBuffer);
+
+// FileSystem
+static void kMountHDD(const char* pcParameterBuffer);
+static void kFormatHDD(const char* pcParameterBuffer);
+static void kShowFileSystemInformation(const char* pcParameterBuffer);
+static void kCreateFileInRootDirectory(const char* pcParameterBuffer);
+static void kDeleteFileInRootDirectory(const char* pcParameterBuffer);
+static void kShowRootDirectory(const char* pcParameterBuffer);
 
 #endif // __CONSOLESHELL_H__

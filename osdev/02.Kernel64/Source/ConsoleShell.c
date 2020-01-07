@@ -9,6 +9,7 @@
 #include "Synchronization.h"
 #include "DynamicMemory.h"
 #include "HardDisk.h"
+#include "FileSystem.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -18,26 +19,46 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   { "totalram", "Show Total RAM Size", kShowTotalRAMSize },
   { "strtod", "String To Decial/Hex Convert", kStringToDecimalHexTest },
   { "shutdown", "Shutdown And Reboot OS", kShutDown },
+
+  // PIT, RCT
   { "settimer", "Set PIT Controller Counter0, ex)settimer 10(ms) 1(periodic)", kSetTimer },
   { "wait", "Wait ms Using PIT, ex)wait 100(ms)", kWaitUsingPIT },
   { "rdtsc", "Read Time Stamp Counter", kReadTimeStampCounter },
   { "cpuspeed", "Measure Processor Speed", kMeasureProcessorSpeed },
   { "date", "Show Date And Time", kShowDateAndTime },
+
+  // Task
   { "createtask", "Create Task ex)createtask 1(type) 10(count)", kCreateTestTask },
   { "changepriority", "Change Task Priority, ex)changepriority 1(ID) 2(Priorty)", kChangeTaskPriority },
   { "tasklist", "Show Task List", kShowTaskList },
   { "killtask", "End Task, ex)killtask 1(ID) or 0xffffffff(All Task)", kKillTask },
   { "cpuload", "Show processor Load", kCPULoad },
+
+  // Mutex
   { "testmutex", "Test Mutex Function", kTestMutex },
+
+  // Thread
   { "testthread", "Test Thread And Process Function", kTestThread },
   { "showmatrix", "Show Matrix Screen", kShowMatrix },
+
+  // FPU
   { "testpie", "Test PIE Calculation", kTestPIE },
+
+  // Hard
   { "dynamicmeminfo", "Show Dyanmic Memory Information", kShowDyanmicMemoryInformation },
   { "testseqalloc", "Test Sequential Allocation & Free", kTestSequentialAllocation },
   { "testranalloc", "Test Random Allocation & Free", kTestRandomAllocation },
   { "hddinfo", "Show HDD Information", kShowHDDInformation },
   { "readsector", "Read HDD Sector, ex)readsector 0(LBA) 10(count)", kReadSector },
   { "writesector", "Write HDD Sector, ex)writesector 0(LBA) 10(count)", kWriteSector },
+  
+  // FileSystem
+  { "mounthdd", "Mount HDD", kMountHDD },
+  { "formathdd", "Format HDD", kFormatHDD },
+  { "filesysteminfo", "Show File System Information", kShowFileSystemInformation },
+  { "createfile", "Create File, ex)createfile a.txt", kCreateFileInRootDirectory },
+  { "deletefile", "Delete File, ex)deletefile a.txt", kDeleteFileInRootDirectory },
+  { "dir", "Show Directory", kShowRootDirectory },
 };
 
 // TCB
@@ -975,7 +996,6 @@ static void kTestSequentialAllocation(const char* pcParameterBuffer)
     kPrintf("Block List [%d] Test Start\n", i);
     kPrintf("Allocation And Compare: ");
 
-    // 모든 블록을 할당 받아서 값을 채운 후 검사
     for (j = 0; j < (pstMemory->iBlockCountOfSmallestBlock >> i); j++)
     {
       pqwBuffer = kAllocateMemory(DYNAMICMEMORY_MIN_SIZE << i);
@@ -985,7 +1005,6 @@ static void kTestSequentialAllocation(const char* pcParameterBuffer)
         return;
       }
 
-      // 값을 채운 후 다시 검사
       for (k = 0; k < (DYNAMICMEMORY_MIN_SIZE << i) / 8; k++)
       {
         pqwBuffer[k] = k;
@@ -999,12 +1018,10 @@ static void kTestSequentialAllocation(const char* pcParameterBuffer)
           return;
         }
       }
-      // 진행 과정을 . 으로 표시
       kPrintf(".");
     }
 
     kPrintf("\nFree: ");
-    // 할당 받은 블록을 모두 반환
     for (j = 0; j < (pstMemory->iBlockCountOfSmallestBlock >> i); j++)
     {
       if (kFreeMemory((void *)(pstMemory->qwStartAddress +
@@ -1013,7 +1030,6 @@ static void kTestSequentialAllocation(const char* pcParameterBuffer)
         kPrintf("\nFree Fail\n");
         return;
       }
-      // 진행 과정을 . 으로 표시
       kPrintf(".");
     }
     kPrintf("\n");
@@ -1035,14 +1051,11 @@ static void kRandomAllocationTask(void)
 
   for (j = 0; j < 10; j++)
   {
-    // 1KB ~ 32M까지 할당하도록 함
     do
     {
       qwMemorySize = ((kRandom() % (32 * 1024)) + 1) * 1024;
       pbAllocationBuffer = kAllocateMemory(qwMemorySize);
 
-      // 만일 버퍼를 할당 받지 못하면 다른 태스크가 메모리를 사용하고 
-      // 있을 수 있으므로 잠시 대기한 후 다시 시도
       if (pbAllocationBuffer == 0)
       {
         kSleep(1);
@@ -1051,11 +1064,9 @@ static void kRandomAllocationTask(void)
 
     kSPrintf(vcBuffer, "|Address: [0x%Q] Size: [0x%Q] Allocation Success",
       pbAllocationBuffer, qwMemorySize);
-    // 자신의 ID를 Y 좌표로 하여 데이터를 출력
     kPrintStringXY(20, iY, vcBuffer);
     kSleep(200);
 
-    // 버퍼를 반으로 나눠서 랜덤한 데이터를 똑같이 채움 
     kSPrintf(vcBuffer, "|Address: [0x%Q] Size: [0x%Q] Data Write...     ",
       pbAllocationBuffer, qwMemorySize);
     kPrintStringXY(20, iY, vcBuffer);
@@ -1066,7 +1077,6 @@ static void kRandomAllocationTask(void)
     }
     kSleep(200);
 
-    // 채운 데이터가 정상적인지 다시 확인
     kSPrintf(vcBuffer, "|Address: [0x%Q] Size: [0x%Q] Data Verify...   ",
       pbAllocationBuffer, qwMemorySize);
     kPrintStringXY(20, iY, vcBuffer);
@@ -1100,7 +1110,6 @@ static void kShowHDDInformation(const char* pcParameterBuffer)
   HDDINFORMATION stHDD;
   char vcBuffer[100];
 
-  // 하드 디스크의 정보를 읽음
   if (kReadHDDInformation(TRUE, TRUE, &stHDD) == FALSE)
   {
     kPrintf("HDD Information Read Fail\n");
@@ -1109,22 +1118,18 @@ static void kShowHDDInformation(const char* pcParameterBuffer)
 
   kPrintf("============ Primary Master HDD Information ============\n");
 
-  // 모델 번호 출력
   kMemCpy(vcBuffer, stHDD.vwModelNumber, sizeof(stHDD.vwModelNumber));
   vcBuffer[sizeof(stHDD.vwModelNumber) - 1] = '\0';
   kPrintf("Model Number:\t %s\n", vcBuffer);
 
-  // 시리얼 번호 출력
   kMemCpy(vcBuffer, stHDD.vwSerialNumber, sizeof(stHDD.vwSerialNumber));
   vcBuffer[sizeof(stHDD.vwSerialNumber) - 1] = '\0';
   kPrintf("Serial Number:\t %s\n", vcBuffer);
 
-  // 헤드, 실린더, 실린더 당 섹터 수를 출력
   kPrintf("Head Count:\t %d\n", stHDD.wNumberOfHead);
   kPrintf("Cylinder Count:\t %d\n", stHDD.wNumberOfCylinder);
   kPrintf("Sector Count:\t %d\n", stHDD.wNumberOfSectorPerCylinder);
 
-  // 총 섹터 수 출력
   kPrintf("Total Sector:\t %d Sector, %dMB\n", stHDD.dwTotalSectors,
     stHDD.dwTotalSectors / 2 / 1024);
 }
@@ -1140,7 +1145,6 @@ static void kReadSector(const char* pcParameterBuffer)
   BYTE bData;
   BOOL bExit = FALSE;
 
-  // 파라미터 리스트를 초기화하여 LBA 어드레스와 섹터 수 추출
   kInitializeParameter(&stList, pcParameterBuffer);
   if ((kGetNextParameter(&stList, vcLBA) == 0) ||
     (kGetNextParameter(&stList, vcSectorCount) == 0))
@@ -1151,12 +1155,10 @@ static void kReadSector(const char* pcParameterBuffer)
   dwLBA = kAToI(vcLBA, 10);
   iSectorCount = kAToI(vcSectorCount, 10);
 
-  // 섹터 수만큼 메모리를 할당 받아 읽기 수행
   pcBuffer = kAllocateMemory(iSectorCount * 512);
   if (kReadHDDSector(TRUE, TRUE, dwLBA, iSectorCount, pcBuffer) == iSectorCount)
   {
     kPrintf("LBA [%d], [%d] Sector Read Success~!!", dwLBA, iSectorCount);
-    // 데이터 버퍼의 내용을 출력
     for (j = 0; j < iSectorCount; j++)
     {
       for (i = 0; i < 512; i++)
@@ -1176,7 +1178,6 @@ static void kReadSector(const char* pcParameterBuffer)
           kPrintf("\n[LBA:%d, Offset:%d]\t| ", dwLBA + j, i);
         }
 
-        // 모두 두 자리로 표시하려고 16보다 작은 경우 0을 추가해줌
         bData = pcBuffer[j * 512 + i] & 0xFF;
         if (bData < 16)
         {
@@ -1212,7 +1213,6 @@ static void kWriteSector(const char* pcParameterBuffer)
   BYTE bData;
   static DWORD s_dwWriteCount = 0;
 
-  // 파라미터 리스트를 초기화하여 LBA 어드레스와 섹터 수 추출
   kInitializeParameter(&stList, pcParameterBuffer);
   if ((kGetNextParameter(&stList, vcLBA) == 0) ||
     (kGetNextParameter(&stList, vcSectorCount) == 0))
@@ -1225,8 +1225,6 @@ static void kWriteSector(const char* pcParameterBuffer)
 
   s_dwWriteCount++;
 
-  // 버퍼를 할당 받아 데이터를 채움. 
-  // 패턴은 4 바이트의 LBA 어드레스와 4 바이트의 쓰기가 수행된 횟수로 생성
   pcBuffer = kAllocateMemory(iSectorCount * 512);
   for (j = 0; j < iSectorCount; j++)
   {
@@ -1237,7 +1235,6 @@ static void kWriteSector(const char* pcParameterBuffer)
     }
   }
 
-  // 쓰기 수행
   if (kWriteHDDSector(TRUE, TRUE, dwLBA, iSectorCount, pcBuffer) != iSectorCount)
   {
     kPrintf("Write Fail\n");
@@ -1245,7 +1242,6 @@ static void kWriteSector(const char* pcParameterBuffer)
   }
   kPrintf("LBA [%d], [%d] Sector Write Success~!!", dwLBA, iSectorCount);
 
-  // 데이터 버퍼의 내용을 출력
   for (j = 0; j < iSectorCount; j++)
   {
     for (i = 0; i < 512; i++)
@@ -1265,7 +1261,6 @@ static void kWriteSector(const char* pcParameterBuffer)
         kPrintf("\n[LBA:%d, Offset:%d]\t| ", dwLBA + j, i);
       }
 
-      // 모두 두 자리로 표시하려고 16보다 작은 경우 0을 추가해줌
       bData = pcBuffer[j * 512 + i] & 0xFF;
       if (bData < 16)
       {
@@ -1281,4 +1276,194 @@ static void kWriteSector(const char* pcParameterBuffer)
   }
   kPrintf("\n");
   kFreeMemory(pcBuffer);
+}
+
+static void kMountHDD(const char* pcParameterBuffer)
+{
+  if (kMount() == FALSE)
+  {
+    kPrintf("HDD Mount Fail\n");
+    return;
+  }
+  kPrintf("HDD Mount Success\n");
+}
+
+static void kFormatHDD(const char* pcParameterBuffer)
+{
+  if (kFormat() == FALSE)
+  {
+    kPrintf("HDD Format Fail\n");
+    return;
+  }
+  kPrintf("HDD Format Success\n");
+}
+
+static void kShowFileSystemInformation(const char* pcParameterBuffer)
+{
+  FILESYSTEMMANAGER stManager;
+
+  kGetFileSystemInformation(&stManager);
+
+  kPrintf("================== File System Information ==================\n");
+  kPrintf("Mouted:\t\t\t\t\t %d\n", stManager.bMounted);
+  kPrintf("Reserved Sector Count:\t\t\t %d Sector\n", stManager.dwReservedSectorCount);
+  kPrintf("Cluster Link Table Start Address:\t %d Sector\n",
+    stManager.dwClusterLinkAreaStartAddress);
+  kPrintf("Cluster Link Table Size:\t\t %d Sector\n", stManager.dwClusterLinkAreaSize);
+  kPrintf("Data Area Start Address:\t\t %d Sector\n", stManager.dwDataAreaStartAddress);
+  kPrintf("Total Cluster Count:\t\t\t %d Cluster\n", stManager.dwTotalClusterCount);
+}
+
+static void kCreateFileInRootDirectory(const char* pcParameterBuffer)
+{
+  PARAMETERLIST stList;
+  char vcFileName[50];
+  int iLength;
+  DWORD dwCluster;
+  DIRECTORYENTRY stEntry;
+  int i;
+
+  kInitializeParameter(&stList, pcParameterBuffer);
+  iLength = kGetNextParameter(&stList, vcFileName);
+  vcFileName[iLength] = '\0';
+  if ((iLength > (sizeof(stEntry.vcFileName) - 1)) || (iLength == 0))
+  {
+    kPrintf("Too Long or Too Short File Name\n");
+    return;
+  }
+
+  dwCluster = kFindFreeCluster();
+  if ((dwCluster == FILESYSTEM_LASTCLUSTER) ||
+    (kSetClusterLinkData(dwCluster, FILESYSTEM_LASTCLUSTER) == FALSE))
+  {
+    kPrintf("Cluster Allocation Fail\n");
+    return;
+  }
+
+  i = kFindFreeDirectoryEntry();
+  if (i == -1)
+  {
+    kSetClusterLinkData(dwCluster, FILESYSTEM_FREECLUSTER);
+    kPrintf("Directory Entry is Full\n");
+    return;
+  }
+
+  kMemCpy(stEntry.vcFileName, vcFileName, iLength + 1);
+  stEntry.dwStartClusterIndex = dwCluster;
+  stEntry.dwFileSize = 0;
+
+  if (kSetDirectoryEntryData(i, &stEntry) == FALSE)
+  {
+    kSetClusterLinkData(dwCluster, FILESYSTEM_FREECLUSTER);
+    kPrintf("Directory Entry Set Fail\n");
+  }
+  kPrintf("File Create Success\n");
+}
+
+static void kDeleteFileInRootDirectory(const char* pcParameterBuffer)
+{
+  PARAMETERLIST stList;
+  char vcFileName[50];
+  int iLength;
+  DIRECTORYENTRY stEntry;
+  int iOffset;
+
+  kInitializeParameter(&stList, pcParameterBuffer);
+  iLength = kGetNextParameter(&stList, vcFileName);
+  vcFileName[iLength] = '\0';
+  if ((iLength > (sizeof(stEntry.vcFileName) - 1)) || (iLength == 0))
+  {
+    kPrintf("Too Long or Too Short File Name\n");
+    return;
+  }
+
+  iOffset = kFindDirectoryEntry(vcFileName, &stEntry);
+  if (iOffset == -1)
+  {
+    kPrintf("File Not Found\n");
+    return;
+  }
+
+  if (kSetClusterLinkData(stEntry.dwStartClusterIndex, FILESYSTEM_FREECLUSTER)
+    == FALSE)
+  {
+    kPrintf("Cluster Free Fail\n");
+    return;
+  }
+
+  kMemSet(&stEntry, 0, sizeof(stEntry));
+  if (kSetDirectoryEntryData(iOffset, &stEntry) == FALSE)
+  {
+    kPrintf("Root Directory Update Fail\n");
+    return;
+  }
+
+  kPrintf("File Delete Success\n");
+}
+
+static void kShowRootDirectory(const char* pcParameterBuffer)
+{
+  BYTE* pbClusterBuffer;
+  int i, iCount, iTotalCount;
+  DIRECTORYENTRY* pstEntry;
+  char vcBuffer[400];
+  char vcTempValue[50];
+  DWORD dwTotalByte;
+
+  pbClusterBuffer = kAllocateMemory(FILESYSTEM_SECTORPERCLUSTER * 512);
+
+  if (kReadCluster(0, pbClusterBuffer) == FALSE)
+  {
+    kPrintf("Root Directory Read Fail\n");
+    return;
+  }
+
+  pstEntry = (DIRECTORYENTRY*)pbClusterBuffer;
+  iTotalCount = 0;
+  dwTotalByte = 0;
+  for (i = 0; i < FILESYSTEM_MAXDIRECTORYENTRYCOUNT; i++)
+  {
+    if (pstEntry[i].dwStartClusterIndex == 0)
+    {
+      continue;
+    }
+    iTotalCount++;
+    dwTotalByte += pstEntry[i].dwFileSize;
+  }
+
+  pstEntry = (DIRECTORYENTRY*)pbClusterBuffer;
+  iCount = 0;
+  for (i = 0; i < FILESYSTEM_MAXDIRECTORYENTRYCOUNT; i++)
+  {
+    if (pstEntry[i].dwStartClusterIndex == 0)
+    {
+      continue;
+    }
+    kMemSet(vcBuffer, ' ', sizeof(vcBuffer) - 1);
+    vcBuffer[sizeof(vcBuffer) - 1] = '\0';
+
+    kMemCpy(vcBuffer, pstEntry[i].vcFileName,
+      kStrLen(pstEntry[i].vcFileName));
+    kSPrintf(vcTempValue, "%d Byte", pstEntry[i].dwFileSize);
+    kMemCpy(vcBuffer + 30, vcTempValue, kStrLen(vcTempValue));
+    kSPrintf(vcTempValue, "0x%X Cluster", pstEntry[i].dwStartClusterIndex);
+    kMemCpy(vcBuffer + 55, vcTempValue, kStrLen(vcTempValue) + 1);
+    kPrintf("    %s\n", vcBuffer);
+
+    if ((iCount != 0) && ((iCount % 20) == 0))
+    {
+      kPrintf("Press any key to continue... ('q' is exit) : ");
+      if (kGetCh() == 'q')
+      {
+        kPrintf("\n");
+        break;
+      }
+    }
+    iCount++;
+  }
+
+  kPrintf("\t Total File Count: %d\t Total File Size: %d Byte\n", iTotalCount,
+    dwTotalByte);
+
+  kFreeMemory(pbClusterBuffer);
 }
