@@ -6,6 +6,7 @@
 #include "ConsoleShell.h"
 #include "Task.h"
 #include "PIT.h"
+#include "DynamicMemory.h"
 
 // C Kernel 
 void Main(void)
@@ -46,6 +47,10 @@ void Main(void)
   kInitializeScheduler();
   // set PIT 1ms
   kInitializePIT(MSTOCOUNT(1), 0);
+
+  kPrintf("Dynamic MEmory Initialize...................[PASS]\n");
+  iCursorY++;
+  kInitializeDynamicMemory();
 
   kPrintf("Keyboard Activate And Queue Initialize......[    ]");
 
