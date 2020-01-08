@@ -97,6 +97,7 @@
     <ClCompile Include="00.BootLoader\Makefile" />
     <ClCompile Include="01.Kernel32\Source\Main.c" />
     <ClCompile Include="01.Kernel32\Source\Page.c" />
+    <ClCompile Include="02.Kernel64\Source\CacheManager.c" />
     <ClCompile Include="02.Kernel64\Source\Console.c" />
     <ClCompile Include="02.Kernel64\Source\ConsoleShell.c" />
     <ClCompile Include="02.Kernel64\Source\Descriptor.c" />
@@ -110,6 +111,7 @@
     <ClCompile Include="02.Kernel64\Source\PIC.c" />
     <ClCompile Include="02.Kernel64\Source\PIT.c" />
     <ClCompile Include="02.Kernel64\Source\Queue.c" />
+    <ClCompile Include="02.Kernel64\Source\RAMDisk.c" />
     <ClCompile Include="02.Kernel64\Source\RTC.c" />
     <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
@@ -135,6 +137,7 @@
     <ClInclude Include="01.Kernel32\Source\Page.h" />
     <ClInclude Include="01.Kernel32\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\AssemblyUtility.h" />
+    <ClInclude Include="02.Kernel64\Source\CacheManager.h" />
     <ClInclude Include="02.Kernel64\Source\Console.h" />
     <ClInclude Include="02.Kernel64\Source\ConsoleShell.h" />
     <ClInclude Include="02.Kernel64\Source\Descriptor.h" />
@@ -148,6 +151,7 @@
     <ClInclude Include="02.Kernel64\Source\PIC.h" />
     <ClInclude Include="02.Kernel64\Source\PIT.h" />
     <ClInclude Include="02.Kernel64\Source\Queue.h" />
+    <ClInclude Include="02.Kernel64\Source\RAMDisk.h" />
     <ClInclude Include="02.Kernel64\Source\RTC.h" />
     <ClInclude Include="02.Kernel64\Source\Synchronization.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />

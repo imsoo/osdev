@@ -1,6 +1,8 @@
 #include "FileSystem.h"
 #include "HardDisk.h"
+#include "RAMDisk.h"
 #include "DynamicMemory.h"
+#include "CacheManager.h"
 #include "Utility.h"
 
 static FILESYSTEMMANAGER gs_stFileSystemManager;
@@ -15,6 +17,8 @@ fWriteHDDSector gs_pfWriteHDDSector = NULL;
 */
 BOOL kInitializeFileSystem(void)
 {
+  BOOL bCacheEnable = FALSE;
+
   kMemSet(&gs_stFileSystemManager, 0, sizeof(gs_stFileSystemManager));
   kInitializeMutex(&(gs_stFileSystemManager.stMutex));
 
@@ -22,6 +26,19 @@ BOOL kInitializeFileSystem(void)
     gs_pfReadHDDInformation = kReadHDDInformation;
     gs_pfReadHDDSector = kReadHDDSector;
     gs_pfWriteHDDSector = kWriteHDDSector;
+
+    // Cache Enable
+    bCacheEnable = TRUE;
+  }
+  else if (kInitializeRDD(RDD_TOTAL_SECTORCOUNT) == TRUE) {
+    gs_pfReadHDDInformation = kReadRDDInformation;
+    gs_pfReadHDDSector = kReadRDDSector;
+    gs_pfWriteHDDSector = kWriteRDDSector;
+
+    // Ramdisk always need format for mount
+    if (kFormat() == FALSE) {
+      return FALSE;
+    }
   }
   else {
     return FALSE;
@@ -38,6 +55,11 @@ BOOL kInitializeFileSystem(void)
     return FALSE;
   }
   kMemSet(gs_stFileSystemManager.pstHandlePool, 0, FILESYSTEM_HANDLE_MAXCOUNT * sizeof(FILE));
+
+  // Cache Enable
+  if (bCacheEnable == TRUE) {
+    gs_stFileSystemManager.bCacheEnable = kInitializeCacheManager();
+  }
 
   return TRUE;
 }
@@ -154,6 +176,12 @@ BOOL kFormat(void)
     }
   }
 
+  // Cache Clear
+  if (gs_stFileSystemManager.bCacheEnable == TRUE) {
+    kDiscardAllCacheBuffer(CACHE_CLUSTERLINKTABLEAREA);
+    kDiscardAllCacheBuffer(CACHE_DATAAREA);
+  }
+
   kUnlock(&(gs_stFileSystemManager.stMutex));
   // --- CRITCAL SECTION END ---
   return TRUE;
@@ -177,29 +205,306 @@ BOOL kGetHDDInformation(HDDINFORMATION* pstInformation)
   return bResult;
 }
 
+/*
+  Read Cluster Table 
+*/
 static BOOL kReadClusterLinkTable(DWORD dwOffset, BYTE* pbBuffer) {
+  // if use cache
+  if (gs_stFileSystemManager.bCacheEnable == FALSE) {
+    kInternalReadClusterLinkTableWithoutCache(dwOffset, pbBuffer);
+  }
+  else {
+    kInternalReadClusterLinkTableWithCache(dwOffset, pbBuffer);
+  }
+}
+
+/*
+  Read Cluster Table Without Cache
+*/
+static BOOL kInternalReadClusterLinkTableWithoutCache(DWORD dwOffset,
+  BYTE* pbBuffer) {
   return gs_pfReadHDDSector(TRUE, TRUE, dwOffset +
     gs_stFileSystemManager.dwClusterLinkAreaStartAddress, 1, pbBuffer);
 }
 
+/*
+  Read Cluster Table With Cache
+*/
+static BOOL kInternalReadClusterLinkTableWithCache(DWORD dwOffset,
+  BYTE* pbBuffer)
+{
+  CACHEBUFFER* pstCacheBuffer;
+
+  // Read Cache buffer
+  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  if (pstCacheBuffer != NULL) {
+    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, 512);
+    return TRUE;
+  }
+
+  // Cache dosen't exist, Read From HardDrive
+  if (kInternalReadClusterLinkTableWithoutCache(dwOffset, pbBuffer) == FALSE) {
+    return FALSE;
+  }
+
+  // Update Cache
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  if (pstCacheBuffer == NULL) {
+    return FALSE;
+  }
+  kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, 512);
+
+  // Set Cache info
+  pstCacheBuffer->dwTag = dwOffset;
+  pstCacheBuffer->bChanged = FALSE;
+  return TRUE;
+}
+
+/*
+  Allocate Cache Buffer
+  if Cache is Full, select one and flush to disk
+*/
+static CACHEBUFFER* kAllocateCacheBufferWithFlush(int iCacheTableIndex)
+{
+  CACHEBUFFER* pstCacheBuffer;
+
+  pstCacheBuffer = kAllocateCacheBuffer(iCacheTableIndex);
+  if (pstCacheBuffer == NULL) {
+    // select one to swap out
+    pstCacheBuffer = kGetVictimInCacheBuffer(iCacheTableIndex);
+    if (pstCacheBuffer == NULL) {
+      kPrintf("Cache Allocate Fail...\n");
+      return NULL;
+    }
+
+    if (pstCacheBuffer->bChanged == TRUE) {
+      switch (iCacheTableIndex)
+      {
+      case CACHE_CLUSTERLINKTABLEAREA:
+        if (kInternalWriteClusterLinkTableWithoutCache(
+          pstCacheBuffer->dwTag, pstCacheBuffer->pbBuffer) == FALSE) {
+          kPrintf("Cache Buffer Write Fail...\n");
+          return NULL;
+        }
+        break;
+      case CACHE_DATAAREA:
+        if (kInternalWriteClusterWithoutCache(
+          pstCacheBuffer->dwTag, pstCacheBuffer->pbBuffer) == FALSE) {
+          kPrintf("Cache Buffer Write Fail...\n");
+          return NULL;
+        }
+        break;
+      default:
+        kPrintf("kAllocateCacheBufferWithFlush Fail...\n");
+        return NULL;
+        break;
+      }
+    }
+  }
+  return pstCacheBuffer;
+}
+
+/*
+  if Cache is changed, Flush to HardDisk
+*/
+BOOL kFlushFileSystemCache(void)
+{
+  CACHEBUFFER* pstCacheBuffer;
+  int iCacheCount;
+  int i;
+
+  if (gs_stFileSystemManager.bCacheEnable == FALSE) {
+    return TRUE;
+  }
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stFileSystemManager.stMutex));
+
+  // cluster link flush to disk
+  kGetCacheBufferCount(CACHE_CLUSTERLINKTABLEAREA, &pstCacheBuffer, &iCacheCount);
+  for (i = 0; i < iCacheCount; i++) {
+    if (pstCacheBuffer[i].bChanged == TRUE) {
+      if (kInternalWriteClusterLinkTableWithoutCache(pstCacheBuffer[i].dwTag, pstCacheBuffer[i].pbBuffer) == FALSE) {
+        return FALSE;
+      }
+      pstCacheBuffer[i].bChanged == FALSE;
+    }
+  }
+
+  // data flush to disk
+  kGetCacheBufferCount(CACHE_DATAAREA, &pstCacheBuffer, &iCacheCount);
+  for (i = 0; i < iCacheCount; i++) {
+    if (pstCacheBuffer[i].bChanged == TRUE) {
+      if (kInternalWriteClusterWithoutCache(pstCacheBuffer[i].dwTag, pstCacheBuffer[i].pbBuffer) == FALSE) {
+        return FALSE;
+      }
+      pstCacheBuffer[i].bChanged == FALSE;
+    }
+  }
+
+  kUnlock(&(gs_stFileSystemManager.stMutex));
+  // --- CRITCAL SECTION END ---
+  return TRUE;
+}
+
+/*
+  Write Cluster Table
+*/
 static BOOL kWriteClusterLinkTable(DWORD dwOffset, BYTE* pbBuffer)
+{
+  if (gs_stFileSystemManager.bCacheEnable == FALSE) {
+    return kInternalWriteClusterLinkTableWithoutCache(dwOffset, pbBuffer);
+  }
+  else {
+    return kInternalWriteClusterLinkTableWithCache(dwOffset, pbBuffer);
+  }
+}
+
+/*
+  Write Cluster Table Without Cache
+*/
+static BOOL kInternalWriteClusterLinkTableWithoutCache(DWORD dwOffset,
+  BYTE* pbBuffer)
 {
   return gs_pfWriteHDDSector(TRUE, TRUE, dwOffset +
     gs_stFileSystemManager.dwClusterLinkAreaStartAddress, 1, pbBuffer);
 }
 
+/*
+  Write Cluster Table With Cache
+*/
+static BOOL kInternalWriteClusterLinkTableWithCache(DWORD dwOffset,
+  BYTE* pbBuffer)
+{
+  CACHEBUFFER* pstCacheBuffer;
+
+  // Read Cache buffer
+  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  if (pstCacheBuffer != NULL) {
+    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, 512);
+
+    pstCacheBuffer->bChanged = TRUE;
+    return TRUE;
+  }
+
+  // Cache dosen't exist, Copy to Cache
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  if (pstCacheBuffer == NULL) {
+    return FALSE;
+  }
+  kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, 512);
+
+  // Set Cache info
+  pstCacheBuffer->dwTag = dwOffset;
+  pstCacheBuffer->bChanged = TRUE;
+  return TRUE;
+}
+
+/*
+  Read Data Area Cluster
+*/
 static BOOL kReadCluster(DWORD dwOffset, BYTE* pbBuffer)
+{
+  if (gs_stFileSystemManager.bCacheEnable == FALSE) {
+    return kInternalReadClusterWithoutCache(dwOffset, pbBuffer);
+  }
+  else {
+    return kInternalReadClusterWithCache(dwOffset, pbBuffer);
+  }
+}
+
+/*
+  Read Data Area Cluster Without Cache
+*/
+static BOOL kInternalReadClusterWithoutCache(DWORD dwOffset, BYTE* pbBuffer)
 {
   return gs_pfReadHDDSector(TRUE, TRUE, (dwOffset * FILESYSTEM_SECTORPERCLUSTER) +
     gs_stFileSystemManager.dwDataAreaStartAddress,
     FILESYSTEM_SECTORPERCLUSTER, pbBuffer);
 }
 
+/*
+  Read Data Area Cluster With Cache
+*/
+static BOOL kInternalReadClusterWithCache(DWORD dwOffset, BYTE* pbBuffer)
+{
+  CACHEBUFFER* pstCacheBuffer;
+
+  // Read Cache buffer
+  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  if (pstCacheBuffer != NULL) {
+    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, FILESYSTEM_CLUSTERSIZE);
+    return TRUE;
+  }
+
+  // Cache dosen't exist, Read From HardDrive
+  if (kInternalReadClusterWithoutCache(dwOffset, pbBuffer) == FALSE) {
+    return FALSE;
+  }
+
+  // Update Cache
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  if (pstCacheBuffer == NULL) {
+    return FALSE;
+  }
+  kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, FILESYSTEM_CLUSTERSIZE);
+
+  // Set Cache info
+  pstCacheBuffer->dwTag = dwOffset;
+  pstCacheBuffer->bChanged = FALSE;
+  return TRUE;
+}
+
+/*
+  Write Write Area Cluster
+*/
 static BOOL kWriteCluster(DWORD dwOffset, BYTE* pbBuffer)
+{
+  if (gs_stFileSystemManager.bCacheEnable == FALSE) {
+    return kInternalWriteClusterWithoutCache(dwOffset, pbBuffer);
+  }
+  else {
+    return kInternalWriteClusterWithCache(dwOffset, pbBuffer);
+  }
+}
+
+/*
+  Write Write Area Cluster Without Cache
+*/
+static BOOL kInternalWriteClusterWithoutCache(DWORD dwOffset, BYTE* pbBuffer)
 {
   return gs_pfWriteHDDSector(TRUE, TRUE, (dwOffset * FILESYSTEM_SECTORPERCLUSTER) +
     gs_stFileSystemManager.dwDataAreaStartAddress,
     FILESYSTEM_SECTORPERCLUSTER, pbBuffer);
+}
+
+/*
+  Write Write Area Cluster with Cache
+*/
+static BOOL kInternalWriteClusterWithCache(DWORD dwOffset, BYTE* pbBuffer)
+{
+  CACHEBUFFER* pstCacheBuffer;
+
+  // Read Cache buffer
+  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  if (pstCacheBuffer != NULL) {
+    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, FILESYSTEM_CLUSTERSIZE);
+
+    pstCacheBuffer->bChanged = TRUE;
+    return TRUE;
+  }
+
+  // Cache dosen't exist, Copy to Cache
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  if (pstCacheBuffer == NULL) {
+    return FALSE;
+  }
+  kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, FILESYSTEM_CLUSTERSIZE);
+
+  // Set Cache info
+  pstCacheBuffer->dwTag = dwOffset;
+  pstCacheBuffer->bChanged = TRUE;
+  return TRUE;
 }
 
 /*

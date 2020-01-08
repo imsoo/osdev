@@ -10,7 +10,7 @@
 #include "HardDisk.h"
 #include "FileSystem.h"
 
-// C Kernel 
+// C Kernel Entry Point
 void Main(void)
 {
   int iCursorX, iCursorY;
@@ -78,19 +78,9 @@ void Main(void)
   kSetCursor(45, iCursorY++);
   kPrintf("Pass\n");
 
-  // Init HDD device Controller
-  kPrintf("HDD Initialize..............................[    ]");
-  if (kInitializeHDD() == TRUE) {
-    kSetCursor(45, iCursorY++);
-    kPrintf("Pass\n");
-  }
-  else {
-    kSetCursor(45, iCursorY++);
-    kPrintf("Fail\n");
-  }
-
   // Init FileSystem
   kPrintf("File System Initialize......................[    ]");
+
   if (kInitializeFileSystem() == TRUE) {
     kSetCursor(45, iCursorY++);
     kPrintf("Pass\n");
