@@ -48,7 +48,7 @@ void Main(void)
   iCursorY++;
   kInitializeScheduler();
   // set PIT 1ms
-  kInitializePIT(MSTOCOUNT(1), 0);
+  kInitializePIT(MSTOCOUNT(1), TRUE);
 
   kPrintf("Dynamic MEmory Initialize...................[Pass]\n");
   iCursorY++;

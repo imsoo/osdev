@@ -7,8 +7,8 @@
 #define QWORD unsigned long
 #define BOOL  unsigned char
 
-#define TRUE  0
-#define FALSE 1
+#define TRUE  1
+#define FALSE 0
 #define NULL  0
 
 #pragma pack(push, 1)

@@ -287,8 +287,14 @@ static BOOL kAddTaskToReadyList(TCB* pstTask)
 
   bPriority = GETPRIORITY(pstTask->qwFlags);
 
+  // WAIT
+  if (bPriority == TASK_FLAGS_WAIT)
+  {
+    kAddListToTail(&(gs_stScheduler.stWaitList), pstTask);
+    return TRUE;
+  }
   // invalid priority
-  if (bPriority >= TASK_MAXREADYLISTCOUNT)
+  else if (bPriority >= TASK_MAXREADYLISTCOUNT)
     return FALSE;
 
   kAddListToTail(&(gs_stScheduler.vstReadyList[bPriority]), pstTask);
@@ -349,9 +355,6 @@ BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority)
       pstTarget = kGetTCBInTCBPool(GETTCBOFFSET(qwTaskID));
       if (pstTarget != NULL) {
         SETPRIORITY(pstTarget->qwFlags, bPriority);
-      }
-      else {
-        return FALSE;
       }
     }
     // if task in ready list, pop task, set priority, push task

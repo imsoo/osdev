@@ -268,7 +268,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     (iSectorCount <= 0) || (256 < iSectorCount) ||
     ((dwLBA + iSectorCount) >= gs_stHDDManager.stHDDInformation.dwTotalSectors))
   {
-    return FALSE;
+    return 0;
   }
 
   // Select Port (Primary, Second)
@@ -335,7 +335,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
       kPrintf("Error Occur\n");
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return FALSE;
+      return i;
     }
 
     // Check DATAREQUEST Bit
@@ -364,7 +364,7 @@ int kReadHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
 
   kUnlock(&(gs_stHDDManager.stMutex));
   // --- CRITCAL SECTION END ---
-  return TRUE;
+  return i;
 }
 
 /*
@@ -387,7 +387,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     ((dwLBA + iSectorCount) >= gs_stHDDManager.stHDDInformation.dwTotalSectors))
 
   {
-    return FALSE;
+    return 0;
   }
 
   // Select Port (Primary, Second)
@@ -438,7 +438,6 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
   // Send command
   kOutPortByte(wPortBase + HDD_PORT_INDEX_COMMAND, HDD_COMMAND_WRITE);
 
-  // 데이터 송신이 가능할 때까지 대기
   while (1)
   {
     // Read HDD Status Register, and Check error
@@ -447,7 +446,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     {
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return FALSE;
+      return 0;
     }
 
     // Check DATAREQUEST Bit
@@ -476,7 +475,7 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
     {
       kUnlock(&(gs_stHDDManager.stMutex));
       // --- CRITCAL SECTION END ---
-      return FALSE;
+      return i;
     }
 
     // Check DATAREQUEST Bit
@@ -496,5 +495,5 @@ int kWriteHDDSector(BOOL bPrimary, BOOL bMaster, DWORD dwLBA, int iSectorCount,
   }
   kUnlock(&(gs_stHDDManager.stMutex));
   // --- CRITCAL SECTION END ---
-  return TRUE;
+  return i;
 }

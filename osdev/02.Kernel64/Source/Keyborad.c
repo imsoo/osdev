@@ -414,7 +414,7 @@ void UpdateCombinationKeyStatusAndLED(BYTE bScanCode)
 
   // shift
   if ((bDownScanCode == 42) || (bDownScanCode == 54))
-    gs_stKeyBoardManager.bShiftDown = TRUE;
+    gs_stKeyBoardManager.bShiftDown = bDown;
   // caps lock
   else if ((bDownScanCode == 58) && (bDown == TRUE)) {
     gs_stKeyBoardManager.bCapsLockOn ^= TRUE;
@@ -533,9 +533,6 @@ BOOL kGetKeyFromKeyQueue(KEYDATA *pstData)
 {
   BOOL bResult;
   BOOL bPreviousInterrupt;
-
-  if (kIsQueueEmpty(&gs_stKeyQueue) == TRUE)
-    return FALSE;
 
   // --- CRITCAL SECTION BEGIN ---
   bPreviousInterrupt = kLockForSystemData();
