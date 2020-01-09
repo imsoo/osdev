@@ -106,6 +106,9 @@
     <ClCompile Include="04.Utility\01.SerialTransfer\NetworkTransfer.c">
       <Filter>04.Utility\01.SerialTransfer</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\MPConfigurationTable.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -217,6 +220,9 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\SerialPort.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\MPConfigurationTable.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

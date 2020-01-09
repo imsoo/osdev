@@ -11,6 +11,7 @@
 #include "HardDisk.h"
 #include "FileSystem.h"
 #include "SerialPort.h"
+#include "MPConfigurationTable.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -70,6 +71,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // Serial Port
   { "download", "Download Data From Serial, ex) download a.txt", kDownloadFile },
+
+  // MP
+  { "showmpinfo", "Show MP Configuration Table Information", kShowMPConfigurationTable },
 };
 
 // TCB
@@ -2054,4 +2058,10 @@ static void kDownloadFile(const char* pcParameterBuffer)
 
   fclose(fp);
   kFlushFileSystemCache();
+}
+
+
+static void kShowMPConfigurationTable(const char* pcParameterBuffer)
+{
+  kPrintMPConfigurationTable();
 }
