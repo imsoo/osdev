@@ -113,10 +113,12 @@
     <ClCompile Include="02.Kernel64\Source\Queue.c" />
     <ClCompile Include="02.Kernel64\Source\RAMDisk.c" />
     <ClCompile Include="02.Kernel64\Source\RTC.c" />
+    <ClCompile Include="02.Kernel64\Source\SerialPort.c" />
     <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
+    <ClCompile Include="04.Utility\01.SerialTransfer\NetworkTransfer.c" />
     <ClCompile Include="Makefile" />
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +132,7 @@
     <None Include="02.Kernel64\Source\EntryPoint.s" />
     <None Include="02.Kernel64\Source\ISR.asm" />
     <None Include="04.Utility\00.ImageMaker\makefile" />
+    <None Include="04.Utility\01.SerialTransfer\makefile" />
     <None Include="04.Utility\makefile" />
   </ItemGroup>
   <ItemGroup>
@@ -153,6 +156,7 @@
     <ClInclude Include="02.Kernel64\Source\Queue.h" />
     <ClInclude Include="02.Kernel64\Source\RAMDisk.h" />
     <ClInclude Include="02.Kernel64\Source\RTC.h" />
+    <ClInclude Include="02.Kernel64\Source\SerialPort.h" />
     <ClInclude Include="02.Kernel64\Source\Synchronization.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />

@@ -25,6 +25,9 @@
     <Filter Include="04.Utility\00.ImageMaker">
       <UniqueIdentifier>{2261562d-f58a-4735-afc8-febb7e3a5174}</UniqueIdentifier>
     </Filter>
+    <Filter Include="04.Utility\01.SerialTransfer">
+      <UniqueIdentifier>{cc985066-2eea-4790-ba68-58c186b323ba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -97,6 +100,12 @@
     <ClCompile Include="02.Kernel64\Source\RAMDisk.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\SerialPort.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="04.Utility\01.SerialTransfer\NetworkTransfer.c">
+      <Filter>04.Utility\01.SerialTransfer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -129,6 +138,9 @@
     </None>
     <None Include="02.Kernel64\Source\ISR.asm">
       <Filter>02.Kernel64\Source</Filter>
+    </None>
+    <None Include="04.Utility\01.SerialTransfer\makefile">
+      <Filter>04.Utility\01.SerialTransfer</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -202,6 +214,9 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\RAMDisk.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\SerialPort.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

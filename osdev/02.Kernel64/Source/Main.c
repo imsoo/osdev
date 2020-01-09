@@ -9,6 +9,7 @@
 #include "DynamicMemory.h"
 #include "HardDisk.h"
 #include "FileSystem.h"
+#include "SerialPort.h"
 
 // C Kernel Entry Point
 void Main(void)
@@ -89,6 +90,11 @@ void Main(void)
     kSetCursor(45, iCursorY++);
     kPrintf("Fail\n");
   }
+
+  // Init Serial Port
+  kPrintf("Serial Port Initialize......................[Pass]\n");
+  iCursorY++;
+  kInitializeSerialPort();
 
   // idle task start
   kCreateTask(TASK_FLAGS_LOWEST | TASK_FLAGS_THREAD | TASK_FLAGS_SYSTEM | TASK_FLAGS_IDLE, 0, 0, (QWORD)kIdleTask);
