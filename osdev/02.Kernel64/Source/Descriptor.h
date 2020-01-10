@@ -2,6 +2,7 @@
 #define __DESCRIPTOR_H__
 
 #include "Types.h"
+#include "MultiProcessor.h"
 
 // GDT
 #define GDT_TYPE_CODE           0x0A
@@ -44,11 +45,11 @@
 // 8byte entry, null, kernel code, kernel data
 #define GDT_MAXENTRY8COUNT  3
 // 16byte entry, TSS
-#define GDT_MAXENTRY16COUNT 1
+#define GDT_MAXENTRY16COUNT (MAXPROCESSORCOUNT)
 // GDT table size 3 + 1
 #define GDT_TABLESIZE       ( ( sizeof( GDTENTRY8 ) * GDT_MAXENTRY8COUNT ) + \
         ( sizeof( GDTENTRY16 ) * GDT_MAXENTRY16COUNT ) )
-#define TSS_SEGMENTSIZE     ( sizeof( TSSSEGMENT ) )
+#define TSS_SEGMENTSIZE     ( sizeof( TSSSEGMENT ) * MAXPROCESSORCOUNT)
 
 // IDT
 #define IDT_TYPE_INTERRUPT      0x0E

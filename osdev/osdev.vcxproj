@@ -107,8 +107,10 @@
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\Keyborad.c" />
     <ClCompile Include="02.Kernel64\Source\List.c" />
+    <ClCompile Include="02.Kernel64\Source\LocalAPIC.c" />
     <ClCompile Include="02.Kernel64\Source\Main.c" />
     <ClCompile Include="02.Kernel64\Source\MPConfigurationTable.c" />
+    <ClCompile Include="02.Kernel64\Source\MultiProcessor.c" />
     <ClCompile Include="02.Kernel64\Source\PIC.c" />
     <ClCompile Include="02.Kernel64\Source\PIT.c" />
     <ClCompile Include="02.Kernel64\Source\Queue.c" />
@@ -152,7 +154,9 @@
     <ClInclude Include="02.Kernel64\Source\ISR.h" />
     <ClInclude Include="02.Kernel64\Source\Keyboard.h" />
     <ClInclude Include="02.Kernel64\Source\List.h" />
+    <ClInclude Include="02.Kernel64\Source\LocalAPIC.h" />
     <ClInclude Include="02.Kernel64\Source\MPConfigurationTable.h" />
+    <ClInclude Include="02.Kernel64\Source\MultiProcessor.h" />
     <ClInclude Include="02.Kernel64\Source\PIC.h" />
     <ClInclude Include="02.Kernel64\Source\PIT.h" />
     <ClInclude Include="02.Kernel64\Source\Queue.h" />

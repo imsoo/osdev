@@ -10,11 +10,21 @@
 #include "HardDisk.h"
 #include "FileSystem.h"
 #include "SerialPort.h"
+#include "MultiProcessor.h"
+
+// AP C Kernele Entry
+void MainForApplicationProcessor(void);
 
 // C Kernel Entry Point
 void Main(void)
 {
   int iCursorX, iCursorY;
+
+  // if AP
+  if (*((BYTE*)BOOTSTRAPPROCESSOR_FLAGADDRESS) == 0) {
+    MainForApplicationProcessor();
+  }
+  *((BYTE*)BOOTSTRAPPROCESSOR_FLAGADDRESS) = 0;
 
   // Init Console
   kInitializeConsole(0, 10);
@@ -100,4 +110,27 @@ void Main(void)
   kCreateTask(TASK_FLAGS_LOWEST | TASK_FLAGS_THREAD | TASK_FLAGS_SYSTEM | TASK_FLAGS_IDLE, 0, 0, (QWORD)kIdleTask);
   // Shell Start
   kStartConsoleShell();
+}
+
+
+
+/*
+  AP (Application Processor) Kernel Entry Point
+*/
+void MainForApplicationProcessor(void)
+{
+  QWORD qwTickCount;
+
+  kLoadGDTR(GDTR_STARTADDRESS);
+  kLoadTR(GDT_TSSSEGMENT + (kGetAPICID() * sizeof(GDTENTRY16)));
+
+  kLoadIDTR(IDTR_STARTADDRESS);
+
+  qwTickCount = kGetTickCount();
+  while (1) {
+    if (kGetTickCount() - qwTickCount > 1000) {
+      qwTickCount = kGetTickCount();
+      kPrintf("Application Processor[APIC ID: %d] is activation\n", kGetAPICID());
+    }
+  }
 }

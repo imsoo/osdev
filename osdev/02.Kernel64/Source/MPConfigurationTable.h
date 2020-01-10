@@ -93,7 +93,7 @@ typedef struct kMPConfigurationTableHeaderStruct
   // Entry Count
   WORD wEntryCount;
 
-  // Local APIC Memory Map I/o Address
+  // Local APIC Memory Map I/O Address
   DWORD dwMemoryMapIOAddressOfLocalAPIC;
 
   // Extended Table Lnegth

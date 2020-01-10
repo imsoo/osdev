@@ -12,6 +12,8 @@
 #include "FileSystem.h"
 #include "SerialPort.h"
 #include "MPConfigurationTable.h"
+#include "LocalAPIC.h"
+#include "MultiProcessor.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -74,6 +76,7 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // MP
   { "showmpinfo", "Show MP Configuration Table Information", kShowMPConfigurationTable },
+  { "startap", "Start Application Processor", kStartApplicationProcessor },
 };
 
 // TCB
@@ -85,6 +88,19 @@ static MUTEX gs_stMutex;
 static volatile QWORD gs_qwAdder;
 
 static volatile QWORD gs_qwRandomValue = 0;
+
+/*
+  Start AP (Application Processor)
+*/
+static void kStartApplicationProcessor(const char* pcParameterBuffer)
+{
+  if (kStartUpApplicationProcessor() == FALSE) {
+    kPrintf("Application Processor Start Fail\n");
+    return;
+  }
+  kPrintf("Application Processor Success\n");
+  kPrintf("BootStrap Processor[APIC ID: %d] Start Application Processor\n", kGetAPICID);
+}
 
 /*
   Shell main function

@@ -103,5 +103,5 @@ static void kDownloadFile(const char* pcParameterBuffer);
 
 // MP
 static void kShowMPConfigurationTable(const char* pcParameterBuffer);
-
+static void kStartApplicationProcessor(const char* pcParameterBuffer);
 #endif // __CONSOLESHELL_H__

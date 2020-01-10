@@ -10,6 +10,15 @@ START:
   mov ds, ax  ; ds 0x1000
   mov es, ax  ; es 0x1000
 
+  ; if AP (Application Processor Go to PE Kernel Directly) 
+  mov ax, 0x0000
+  mov es, ax
+
+  cmp byte[es:0x7C09], 0x00
+  je .APPLICATION_PROCESSOR_START_POINT
+
+  ; else BSP (Bootstrap Porccesor)
+
   ; A20 Gate Enable Using BIOS
   mov ax, 0x2401	; A20 gate enable service
   int 0x15			; BIOS SWI
@@ -25,6 +34,7 @@ START:
   out 0x92, al	; write 
 
 .A20_GATE_SUCCESS:
+.APPLICATION_PROCESSOR_START_POINT:
 
   cli	; interrupt off
   lgdt [GDTR]	; GDTR load
@@ -49,6 +59,10 @@ PROTECTED_MODE:
   mov esp, 0xFFFE
   mov ebp, 0xFFFE
 
+  ; if AP, go to Kerenl Entry
+  cmp byte[0x7C09], 0x00
+  je .APPLICATION_PROCESSOR_START_POINT
+
   ; print enter PM
   push (SWITCH_SUCCESS_MESSAGE - $$ + 0x10000)
   push 2
@@ -56,6 +70,7 @@ PROTECTED_MODE:
   call PRINT_MESSAGE
   add esp, 12
 
+.APPLICATION_PROCESSOR_START_POINT:
   jmp dword 0x18:0x10200	; jump C kernel (0x10200)
 
 ;-----------------------------------

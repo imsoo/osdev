@@ -13,6 +13,9 @@ global kSwitchContext, kHlt, kTestAndSet
 ; FPU
 global kInitializeFPU, kSaveFPUContext, kLoadFPUContext, kSetTS, kClearTS
 
+; Local APIC
+global kEnableGlobalLocalAPIC
+
 ; read from port one byte
 ;   PARAM port_num
 kInPortByte:
@@ -287,4 +290,22 @@ kSetTS:
 ;   PARAM : None
 kClearTS:
   clts
+  ret
+
+; Set IA32_APIC_BASE MSR's APIC Global Enable(bit 11)
+; PARAM : None
+kEnableGlobalLocalAPIC:
+  push rax
+  push rcx
+  push rdx
+
+  mov rcx, 27 ; IA32_APIC_BASE MSR Register Address
+  rdmsr       ; Read MSR
+
+  or eax, 0x0800  ; Set Flag
+  wrmsr           ; Write MSR
+
+  pop rdx
+  pop rcx
+  pop rax
   ret

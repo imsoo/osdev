@@ -2,6 +2,9 @@
 #include "Page.h"
 #include "ModeSwitch.h"
 
+// BSP Flag Address 
+#define BOOTSTRAPPROCESSOR_FLAGADDRESS 0x7C09
+
 void kPrintString(int iX, int iY, const char* pcString);
 BOOL kInitializeKernel64Area(void);
 BOOL kIsMemoryEnough(void);
@@ -12,6 +15,14 @@ void Main(void)
   DWORD i;
   DWORD dwEAX, dwEBX, dwECX, dwEDX;
   char vcVendorString[13] = { 0, };
+
+  // if AP go to 64 Bit Kerenl directly
+  if (*((BYTE*)BOOTSTRAPPROCESSOR_FLAGADDRESS) == 0) {
+    kSwitchAndExecute64bitKernel();
+    while (1);
+  }
+
+  // else (BSP), execute below code
 
   kPrintString(0, 3, "C Language Kernel Start.....................[Pass]");
 
