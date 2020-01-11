@@ -77,6 +77,8 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   // MP
   { "showmpinfo", "Show MP Configuration Table Information", kShowMPConfigurationTable },
   { "startap", "Start Application Processor", kStartApplicationProcessor },
+  { "startsymmetricio", "Start Symmetric I/O Mode", kStartSymmetricIOMode },
+  { "showirqintinmap", "Show IRQ->INITIN Mapping Table", kShowIRQINTINMappingTable },
 };
 
 // TCB
@@ -99,7 +101,7 @@ static void kStartApplicationProcessor(const char* pcParameterBuffer)
     return;
   }
   kPrintf("Application Processor Success\n");
-  kPrintf("BootStrap Processor[APIC ID: %d] Start Application Processor\n", kGetAPICID);
+  kPrintf("BootStrap Processor[APIC ID: %d] Start Application Processor\n", kGetAPICID());
 }
 
 /*
@@ -1007,6 +1009,9 @@ static void kTestPIE(const char* pcParameterBuffer)
   }
 }
 
+/*
+  Print Dynamic Memory info
+*/
 static void kShowDyanmicMemoryInformation(const char* pcParameterBuffer)
 {
   QWORD qwStartAddress, qwTotalSize, qwMetaSize, qwUsedSize;
@@ -1023,6 +1028,9 @@ static void kShowDyanmicMemoryInformation(const char* pcParameterBuffer)
   kPrintf("Used Size:     [0x%Q]byte, [%d]KB\n", qwUsedSize, qwUsedSize / 1024);
 }
 
+/*
+  Dynamic Memory Sequential Allocation Test
+*/
 static void kTestSequentialAllocation(const char* pcParameterBuffer)
 {
   DYNAMICMEMORY* pstMemory;
@@ -1078,6 +1086,9 @@ static void kTestSequentialAllocation(const char* pcParameterBuffer)
   kPrintf("Test Complete~!!!\n");
 }
 
+/*
+  Dynamic Memory Random Allocation Test
+*/
 static void kRandomAllocationTask(void)
 {
   TCB* pstTask;
@@ -1136,6 +1147,9 @@ static void kRandomAllocationTask(void)
   kExitTask();
 }
 
+/*
+  Dynamic Memory Random Allocation Test
+*/
 static void kTestRandomAllocation(const char* pcParameterBuffer)
 {
   int i;
@@ -1146,6 +1160,9 @@ static void kTestRandomAllocation(const char* pcParameterBuffer)
   }
 }
 
+/*
+  Print HDD Infomation
+*/
 static void kShowHDDInformation(const char* pcParameterBuffer)
 {
   HDDINFORMATION stHDD;
@@ -1175,6 +1192,9 @@ static void kShowHDDInformation(const char* pcParameterBuffer)
     stHDD.dwTotalSectors / 2 / 1024);
 }
 
+/*
+  Read HDD Sector Test
+*/
 static void kReadSector(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1242,6 +1262,9 @@ static void kReadSector(const char* pcParameterBuffer)
   kFreeMemory(pcBuffer);
 }
 
+/*
+  Write HDD Sector Test
+*/
 static void kWriteSector(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1319,6 +1342,9 @@ static void kWriteSector(const char* pcParameterBuffer)
   kFreeMemory(pcBuffer);
 }
 
+/*
+  Mount HDD
+*/
 static void kMountHDD(const char* pcParameterBuffer)
 {
   if (kMount() == FALSE)
@@ -1329,6 +1355,9 @@ static void kMountHDD(const char* pcParameterBuffer)
   kPrintf("HDD Mount Success\n");
 }
 
+/*
+  Format HDD
+*/
 static void kFormatHDD(const char* pcParameterBuffer)
 {
   if (kFormat() == FALSE)
@@ -1339,6 +1368,9 @@ static void kFormatHDD(const char* pcParameterBuffer)
   kPrintf("HDD Format Success\n");
 }
 
+/*
+  Print FileSystem information
+*/
 static void kShowFileSystemInformation(const char* pcParameterBuffer)
 {
   FILESYSTEMMANAGER stManager;
@@ -1355,6 +1387,9 @@ static void kShowFileSystemInformation(const char* pcParameterBuffer)
   kPrintf("Total Cluster Count:\t\t\t %d Cluster\n", stManager.dwTotalClusterCount);
 }
 
+/*
+  Create File in Root Dir for test
+*/
 static void kCreateFileInRootDirectory(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1383,6 +1418,9 @@ static void kCreateFileInRootDirectory(const char* pcParameterBuffer)
   kPrintf("File Create Success\n");
 }
 
+/*
+  Delete File in Root Dir for test
+*/
 static void kDeleteFileInRootDirectory(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1407,6 +1445,9 @@ static void kDeleteFileInRootDirectory(const char* pcParameterBuffer)
   kPrintf("File Delete Success\n");
 }
 
+/*
+  Show FileSystem root Directory
+*/
 static void kShowRootDirectory(const char* pcParameterBuffer)
 {
   DIR* pstDirectory;
@@ -1498,6 +1539,9 @@ static void kShowRootDirectory(const char* pcParameterBuffer)
   closedir(pstDirectory);
 }
 
+/*
+  Write to HDD Test
+*/
 static void kWriteDataToFile(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1552,6 +1596,9 @@ static void kWriteDataToFile(const char* pcParameterBuffer)
   fclose(fp);
 }
 
+/*
+  Read from HDD Test 
+*/
 static void kReadDataFromFile(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -1606,6 +1653,9 @@ static void kReadDataFromFile(const char* pcParameterBuffer)
   fclose(fp);
 }
 
+/*
+  File Read/Write Test 
+*/
 static void kTestFileIO(const char* pcParameterBuffer)
 {
   FILE* pstFile;
@@ -1836,7 +1886,9 @@ static void kTestFileIO(const char* pcParameterBuffer)
   kFreeMemory(pbBuffer);
 }
 
-
+/*
+  File Read/Write Performance Test
+*/
 static void kTestPerformance(const char* pcParameterBuffer)
 {
   FILE* pstFile;
@@ -1948,6 +2000,9 @@ static void kTestPerformance(const char* pcParameterBuffer)
   kFreeMemory(pbBuffer);
 }
 
+/*
+  Flush Cache to Drive
+*/
 static void kFlushCache(const char* pcParameterBuffer)
 {
   QWORD qwTickCount;
@@ -1965,6 +2020,9 @@ static void kFlushCache(const char* pcParameterBuffer)
   kPrintf("Total Time = %d ms\n", kGetTickCount() - qwTickCount);
 }
 
+/*
+  DownLoad file using Rs232 Serial Controller
+*/
 static void kDownloadFile(const char* pcParameterBuffer)
 {
   PARAMETERLIST stList;
@@ -2076,8 +2134,73 @@ static void kDownloadFile(const char* pcParameterBuffer)
   kFlushFileSystemCache();
 }
 
-
+/*
+  Print MP Configuration Table
+*/
 static void kShowMPConfigurationTable(const char* pcParameterBuffer)
 {
   kPrintMPConfigurationTable();
+}
+
+/*
+  Switch to Symmetric I/O Mode
+*/
+static void kStartSymmetricIOMode(const char* pcParameterBuffer)
+{
+  MPCONFIGRUATIONMANAGER* pstMPManager;
+  BOOL bInterruptFlag;
+
+  if (kAnalysisMPConfigurationTable() == FALSE)
+  {
+    kPrintf("Analyze MP Configuration Table Fail\n");
+    return;
+  }
+
+  pstMPManager = kGetMPConfigurationManager();
+  // if PIC Mode, Disable PIC
+  if (pstMPManager->bUsePICMode == TRUE)
+  {
+    kOutPortByte(0x22, 0x70);
+    kOutPortByte(0x23, 0x01);
+  }
+
+  // Mask All PIC Controller Interrupt
+  kPrintf("Mask All PIC Controller Interrupt\n");
+  kMaskPICInterrupt(0xFFFF);
+
+  // Enable Global Local APIC
+  kPrintf("Enable Global Local APIC\n");
+  kEnableGlobalLocalAPIC();
+
+  // Enable Software Local APIC
+  kPrintf("Enable Software Local APIC\n");
+  kEnableSoftwareLocalAPIC();
+
+  // Disable CPU Interrupt Flag
+  kPrintf("Disable CPU Interrupt Flag\n");
+  bInterruptFlag = kSetInterruptFlag(FALSE);
+
+  // Set TSR to 0 for receive all interrupt 
+  kSetTaskPriority(0);
+
+  // Init Local APIC Vector Table
+  kInitializeLocalVectorTable();
+
+  // Init I/O APIC 
+  kPrintf("Initialize IO Redirection Table\n");
+  kInitializeIORedirectionTable();
+
+  // Restore CPU Interrupt Flag
+  kPrintf("Restore CPU Interrupt Flag\n");
+  kSetInterruptFlag(bInterruptFlag);
+
+  kPrintf("Change Symmetric I/O Mode Complete\n");
+}
+
+/*
+  Print IRQ <-> I/O APIC INTIN Map Table
+*/
+static void kShowIRQINTINMappingTable(const char* pcParameterBuffer)
+{
+  kPrintIRQToINTINMap();
 }

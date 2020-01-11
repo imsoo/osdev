@@ -7,6 +7,7 @@
 #include "Descriptor.h"
 #include "AssemblyUtility.h"
 #include "HardDisk.h"
+#include "LocalAPIC.h"
 
 /*
   Common Exception Handler
@@ -43,8 +44,11 @@ void kCommonInterruptHandler(int iVectorNumber)
   g_iCommonInterruptCount = (g_iCommonInterruptCount + 1) % 10;
   kPrintStringXY(70, 0, vcBuffer);
 
-  // EOI Send
+  // EOI Send (To PIC)
   kSendEOIToPIC(iVectorNumber - PIC_IRQSTARTVECTOR);
+
+  // EOI Send (To LocalAPIC)
+  kSendEOIToLocalAPIC();
 }
 
 /*
@@ -70,6 +74,9 @@ void kKeyboardHandler(int iVectorNumber)
 
   // EOI Send
   kSendEOIToPIC(iVectorNumber - PIC_IRQSTARTVECTOR);
+
+  // EOI Send (To LocalAPIC)
+  kSendEOIToLocalAPIC();
 }
 
 /*
@@ -89,6 +96,9 @@ void kTimerHandler(int iVectorNumber)
 
   // EOI Send
   kSendEOIToPIC(iVectorNumber - PIC_IRQSTARTVECTOR);
+
+  // EOI Send (To LocalAPIC)
+  kSendEOIToLocalAPIC();
 
   g_qwTickCount++;
 
@@ -172,4 +182,7 @@ void kHDDHandler(int iVectorNumber)
   }
   // EOI Send
   kSendEOIToPIC(iVectorNumber - PIC_IRQSTARTVECTOR);
+
+  // EOI Send (To LocalAPIC)
+  kSendEOIToLocalAPIC();
 }
