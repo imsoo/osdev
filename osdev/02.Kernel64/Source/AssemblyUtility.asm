@@ -8,7 +8,7 @@ global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 global kReadTSC
 
 ; Task
-global kSwitchContext, kHlt, kTestAndSet
+global kSwitchContext, kHlt, kTestAndSet, kPause
 
 ; FPU
 global kInitializeFPU, kSaveFPUContext, kLoadFPUContext, kSetTS, kClearTS
@@ -308,4 +308,10 @@ kEnableGlobalLocalAPIC:
   pop rdx
   pop rcx
   pop rax
+  ret
+
+; Processor to Paues State
+;   PARAM : None
+kPause:
+  pause
   ret

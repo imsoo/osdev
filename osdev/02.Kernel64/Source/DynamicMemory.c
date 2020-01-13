@@ -1,6 +1,7 @@
 #include "DynamicMemory.h"
 #include "Utility.h"
 #include "Task.h"
+
 static DYNAMICMEMORY gs_stDynamicMemory;
 
 void kInitializeDynamicMemory(void)
@@ -66,6 +67,9 @@ void kInitializeDynamicMemory(void)
   gs_stDynamicMemory.qwStartAddress = DYNAMICMEMORY_START_ADDRESS + iMetaBlockCount * DYNAMICMEMORY_MIN_SIZE;
   gs_stDynamicMemory.qwEndAddress = kCalculateDynamicMemorySize() + DYNAMICMEMORY_START_ADDRESS;
   gs_stDynamicMemory.qwUsedSize = 0;
+
+  // SpinLock Init
+  kInitializeSpinLock(&(gs_stDynamicMemory.stSpinLock));
 }
 
 /*
@@ -173,7 +177,6 @@ static int kAllocationBuddyBlock(QWORD qwAlignedSize)
 {
   int iBlockListIndex, iFreeOffset;
   int i;
-  BOOL bPreviousInterruptFlag;
 
   // get Block List index
   iBlockListIndex = kGetBlockListIndexOfMatchSize(qwAlignedSize);
@@ -182,7 +185,7 @@ static int kAllocationBuddyBlock(QWORD qwAlignedSize)
   };
 
   // --- CRITCAL SECTION BEGIN ---
-  bPreviousInterruptFlag = kLockForSystemData();
+  kLockForSpinLock(&(gs_stDynamicMemory.stSpinLock));
 
   // find Block begin i Level to MaxLevel
   for (i = iBlockListIndex; i < gs_stDynamicMemory.iMaxLevelCount; i++) {
@@ -195,7 +198,7 @@ static int kAllocationBuddyBlock(QWORD qwAlignedSize)
 
   // not find
   if (iFreeOffset == -1) {
-    kUnlockForSystemData(bPreviousInterruptFlag);
+    kUnlockForSpinLock(&(gs_stDynamicMemory.stSpinLock));
     // --- CRITCAL SECTION END ---
     return -1;
   }
@@ -210,7 +213,8 @@ static int kAllocationBuddyBlock(QWORD qwAlignedSize)
       iFreeOffset = iFreeOffset * 2;
     }
   }
-  kUnlockForSystemData(bPreviousInterruptFlag);
+
+  kUnlockForSpinLock(&(gs_stDynamicMemory.stSpinLock));
   // --- CRITCAL SECTION END ---
 
   return iFreeOffset;
@@ -331,10 +335,9 @@ static BOOL kFreeBuddyBlock(int iBlockListIndex, int iBlockOffset)
   int iBuddyBlockOffset;
   int i;
   BOOL bFlag;
-  BOOL bPreviousInterruptFlag;
 
   // --- CRITCAL SECTION BEGIN ---
-  bPreviousInterruptFlag = kLockForSystemData();
+  kLockForSpinLock(&(gs_stDynamicMemory.stSpinLock));
 
   for (i = iBlockListIndex; i < gs_stDynamicMemory.iMaxLevelCount; i++) {
     // set block exist
@@ -360,7 +363,8 @@ static BOOL kFreeBuddyBlock(int iBlockListIndex, int iBlockOffset)
     // goto next level
     iBlockOffset = iBlockOffset / 2;
   }
-  kUnlockForSystemData(bPreviousInterruptFlag);
+
+  kUnlockForSpinLock(&(gs_stDynamicMemory.stSpinLock));
   // --- CRITCAL SECTION END ---
   return TRUE;
 }

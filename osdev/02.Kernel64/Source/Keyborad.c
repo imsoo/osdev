@@ -2,7 +2,6 @@
 #include "AssemblyUtility.h"
 #include "Keyboard.h"
 #include "Queue.h"
-#include "Synchronization.h"
 
 /*
   About Control Keyboard
@@ -496,6 +495,9 @@ BOOL kInitializeKeyboard(void)
   // KeyQueue init
   kInitializeQueue(&gs_stKeyQueue, &gs_vstKeyQueueBuffer, KEY_MAXQUEUECOUNT, sizeof(KEYDATA));
 
+  // SpinLock Init
+  kInitializeSpinLock(&(gs_stKeyBoardManager.stSpinLock));
+
   // activate keyboard
   return kActivateKeyboard();
 }
@@ -507,19 +509,18 @@ BOOL kConvertScanCodeAndPutQueue(BYTE bScanCode)
 {
   KEYDATA stData;
   BOOL bResult;
-  BOOL bPreviousInterrupt;
 
   stData.bScanCode = bScanCode;
 
   if (kConvertScanCodeToASCIICode(bScanCode, &(stData.bASCIICode), &(stData.bFlags)) == TRUE) {
     
     // --- CRITCAL SECTION BEGIN ---
-    bPreviousInterrupt = kLockForSystemData();
+    kLockForSpinLock(&(gs_stKeyBoardManager.stSpinLock));
 
     // Put into KeyQueue
     bResult = kPutQueue(&gs_stKeyQueue, &stData);
 
-    kUnlockForSystemData(bPreviousInterrupt);
+    kUnlockForSpinLock(&(gs_stKeyBoardManager.stSpinLock));
     // --- CRITCAL SECTION END ---
   }
 
@@ -532,15 +533,14 @@ BOOL kConvertScanCodeAndPutQueue(BYTE bScanCode)
 BOOL kGetKeyFromKeyQueue(KEYDATA *pstData)
 {
   BOOL bResult;
-  BOOL bPreviousInterrupt;
 
   // --- CRITCAL SECTION BEGIN ---
-  bPreviousInterrupt = kLockForSystemData();
+  kLockForSpinLock(&(gs_stKeyBoardManager.stSpinLock));
 
   // Get from KeyQueue
   bResult = kGetQueue(&gs_stKeyQueue, pstData);
 
-  kUnlockForSystemData(bPreviousInterrupt);
+  kUnlockForSpinLock(&(gs_stKeyBoardManager.stSpinLock));
   // --- CRITCAL SECTION END ---
 
   return bResult;

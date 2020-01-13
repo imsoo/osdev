@@ -1,7 +1,10 @@
 #include "Synchronization.h"
 #include "Utility.h"
 #include "Task.h"
+#include "AssemblyUtility.h"
+#include "MultiProcessor.h"
 
+#if 0
 /*
   System Data Lock Using by Interrupt control
 */
@@ -15,6 +18,81 @@ BOOL kLockForSystemData(void)
 */
 void kUnlockForSystemData(BOOL bInterruptFlag)
 {
+  kSetInterruptFlag(bInterruptFlag);
+}
+#endif
+
+/*
+  Init SpinLock
+*/
+void kInitializeSpinLock(SPINLOCK* pstSpinLock)
+{
+  pstSpinLock->bLockFlag = FALSE;
+  pstSpinLock->dwLockCount = 0;
+  pstSpinLock->bAPICID = 0xFF;
+  pstSpinLock->bInterruptFlag = FALSE;
+}
+
+/*
+  Lock SpinLock
+*/
+void kLockForSpinLock(SPINLOCK* pstSpinLock)
+{
+  BOOL bInterruptFlag;
+
+  bInterruptFlag = kSetInterruptFlag(FALSE);
+
+  if (kTestAndSet(&(pstSpinLock->bLockFlag), 0, 1) == FALSE) {
+
+    // if SpinLock is mine, increase lock Count
+    if (pstSpinLock->bAPICID == kGetAPICID()) {
+      pstSpinLock->dwLockCount++;
+      return;
+    }
+
+    // wait until release
+    while (kTestAndSet(&(pstSpinLock->bLockFlag), 0, 1) == FALSE) {
+      while (pstSpinLock->bLockFlag == TRUE) {
+        kPause();
+      }
+    }
+  }
+
+  pstSpinLock->dwLockCount = 1;
+  pstSpinLock->bAPICID = kGetAPICID();
+
+  pstSpinLock->bInterruptFlag = bInterruptFlag;
+}
+
+/*
+  Unlock SpinLock
+*/
+void kUnlockForSpinLock(SPINLOCK* pstSpinLock)
+{
+  BOOL bInterruptFlag;
+
+  bInterruptFlag = kSetInterruptFlag(FALSE);
+
+  // if SpinLock is not mine
+  if ((pstSpinLock->bLockFlag == FALSE) ||
+    (pstSpinLock->bAPICID != kGetAPICID())) {
+    kSetInterruptFlag(bInterruptFlag);
+    return;
+  }
+
+  if (pstSpinLock->dwLockCount > 1) {
+    pstSpinLock->dwLockCount--;
+    return;
+  }
+
+  bInterruptFlag = pstSpinLock->bInterruptFlag;
+  pstSpinLock->bAPICID = 0xFF;
+  pstSpinLock->dwLockCount = 0;
+  pstSpinLock->bInterruptFlag = FALSE;
+
+  // Lock Flag Clear has to be processed at last position
+  pstSpinLock->bLockFlag = FALSE;
+
   kSetInterruptFlag(bInterruptFlag);
 }
 

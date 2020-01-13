@@ -3,6 +3,7 @@
 
 #include "Types.h"
 #include "List.h"
+#include "Synchronization.h"
 
 // macro
 // SS, RSP, RFLAGS, CS, RIP + 19 Register
@@ -129,6 +130,9 @@ typedef struct kTCBPoolManagerStruct
 
 typedef struct kSchedulerStruct
 {
+  // SpinLock
+  SPINLOCK stSpinLock;
+
   // running task
   TCB* pstRunningTask;
 

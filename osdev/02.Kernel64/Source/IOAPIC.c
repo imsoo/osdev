@@ -184,3 +184,21 @@ void kPrintIRQToINTINMap(void)
     kPrintf("IRQ[%d] -> INTIN[%d]\n", i, gs_stIOAPICManager.vbIRQToINTINMap[i]);
   }
 }
+
+/*
+  Change I/O Redirection Table (IRQ <-> Local APIC ID);
+*/
+void kRoutingIRQToAPICID(int iIRQ, BYTE bAPICID)
+{
+  int i;
+  IOREDIRECTIONTABLE stEntry;
+
+  if (iIRQ > IOAPIC_MAXIOREDIRECTIONTABLECOUNT) {
+    return;
+  }
+
+  // Change Table;
+  kReadIOAPICRedirectionTable(gs_stIOAPICManager.vbIRQToINTINMap[iIRQ], &stEntry);
+  stEntry.bDestination = bAPICID;
+  kWriteIOAPICRedirectionTable(gs_stIOAPICManager.vbIRQToINTINMap[iIRQ], &stEntry);
+}
