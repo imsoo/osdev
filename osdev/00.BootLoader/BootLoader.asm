@@ -8,6 +8,7 @@ jmp 0x07C0:START	; copy 0x07C0 to CS register and jump START label
 TOTAL_SECTOR_COUNT: dw 0x02 ; os image size (sector count)
 KERNEL32_SECTOR_COUNT: dw 0x02 ; prevention mode kernel size (sector count)
 BOOTSTRAP_PROCESSOR: db 0x01  ; BootStrap Processor Flag (0x00 = AP)
+START_GRAPHIC_MODE:  db 0x01   ; Graphic Mode Flag 
 
 ;-----------------------------------
 ; code section begin
@@ -108,7 +109,40 @@ READ_END:
   call PRINT_MESSAGE
   add sp, 6
 
+  ; Get VBE Info Block
+  mov ax, 0x4F01
+  mov cx, 0x117
+  mov bx, 0x07E0
+  mov es, bx
+  mov di, 0x00
+  int 0x10
+  cmp ax, 0x004F
+  jne VBE_ERROR
+
+  ; Check Graphic mode flag
+  cmp byte[START_GRAPHIC_MODE], 0x00
+  je JUMP_TO_PROTECTED_MODE
+
+  ; Set VBE Mode (1024x768, 16bit Color(RGB:565) Linear Frame buffer mode)
+  mov ax, 0x4F02
+  mov bx, 0x4117
+  int 0x10
+  cmp ax, 0x004F
+  jne VBE_ERROR
+
+  jmp JUMP_TO_PROTECTED_MODE
+
+  ; VBE Error
+VBE_ERROR:
+  push CHANGE_GRAPHIC_MODE_FAIL
+  push 2
+  push 0
+  call PRINT_MESSAGE
+  add sp, 6
+  jmp $
+
   ; run loaded os image
+JUMP_TO_PROTECTED_MODE:
   jmp 0x1000:0x0000
 
 ; code section end
@@ -122,6 +156,7 @@ WELCOM_MESSAGE: db 'OS Boot Loader Start...', 0
 DISK_ERROR_MESSAGE: db 'DISK Error....', 0
 IMAGE_LOADING_MESSAGE: db 'OS Image Loading...', 0
 LOADING_COMPLETE_MESSAGE: db 'OS Image Loading Complete...', 0
+CHANGE_GRAPHIC_MODE_FAIL: db 'Change Graphic Mode Fail...', 0
 
 ; about disk read
 SECTOR_NUMBER: db 0x02 ; os image start sector

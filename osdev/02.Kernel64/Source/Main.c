@@ -11,9 +11,13 @@
 #include "FileSystem.h"
 #include "SerialPort.h"
 #include "MultiProcessor.h"
+#include "VBE.h"
 
 // AP C Kernele Entry
 void MainForApplicationProcessor(void);
+
+// Graphic Mode Test
+void kStartGraphicModeTest();
 
 // C Kernel Entry Point
 void Main(void)
@@ -108,8 +112,15 @@ void Main(void)
 
   // idle task start
   kCreateTask(TASK_FLAGS_LOWEST | TASK_FLAGS_THREAD | TASK_FLAGS_SYSTEM | TASK_FLAGS_IDLE, 0, 0, (QWORD)kIdleTask, kGetAPICID());
-  // Shell Start
-  kStartConsoleShell();
+
+  // if CLI Mode : Shell
+  if (*(BYTE*)VBE_STARTGRAPHICMODEFLAGADDRESS == 0) {
+    // Shell Start
+    kStartConsoleShell();
+  }
+  else {
+    kStartGraphicModeTest();
+  }
 }
 
 
@@ -148,4 +159,38 @@ void MainForApplicationProcessor(void)
   kPrintf("Application Processor[APIC ID: %d] is activation\n", kGetAPICID());
 
   kIdleTask();
+}
+
+/*
+  Main for Graphic Mode Test
+*/
+void kStartGraphicModeTest()
+{
+  VBEMODEINFOBLOCK* pstVBEMode;
+  WORD* pwFrameBufferAddress;
+  WORD wColor = 0;
+  int iBandHeight;
+  int i, j;
+
+  kGetCh();
+
+  // Get Frame Buffer Address
+  pstVBEMode = kGetVBEModeInfoBlock();
+  pwFrameBufferAddress = (WORD*)((QWORD)pstVBEMode->dwPhysicalBasePointer);
+
+  iBandHeight = pstVBEMode->wYResolution / 32;
+
+  while (1) {
+    for (j = 0; j < pstVBEMode->wYResolution; j++) {
+      for (i = 0; i < pstVBEMode->wXResolution; i++) {
+        pwFrameBufferAddress[(j * pstVBEMode->wXResolution) + i] = wColor;
+      }
+
+      if ((j % iBandHeight) == 0) {
+        wColor = kRandom() & 0xFFFF;
+      }
+    }
+
+    kGetCh();
+  }
 }

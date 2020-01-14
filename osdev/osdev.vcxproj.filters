@@ -118,6 +118,9 @@
     <ClCompile Include="02.Kernel64\Source\IOAPIC.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\VBE.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -241,6 +244,9 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\IOAPIC.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\VBE.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>
