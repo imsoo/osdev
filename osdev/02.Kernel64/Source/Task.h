@@ -68,6 +68,9 @@
 #define TASK_FLAGS_THREAD   0x1000000000000000
 #define TASK_FLAGS_IDLE     0x0800000000000000
 
+// Task Affinity 
+#define TASK_LOADBALANCINGID  0xFF
+
 // using flags's lower 8 bit 
 #define GETPRIORITY(X) ((X) & 0xFF)
 #define SETPRIORITY(X, PRIOR) ((X) = ((X) & 0xFFFFFFFFFFFFFF00) | (PRIOR))
@@ -99,7 +102,7 @@ typedef struct kTaskControlBlockStruct {
   QWORD qwParentProcessID;
 
   // FPU Context
-  QWORD vqwFPUContex[512 / 8];
+  QWORD vqwFPUContext[512 / 8];
 
   // --- Child THREAD List
   LIST stChildThreadList;
@@ -114,12 +117,20 @@ typedef struct kTaskControlBlockStruct {
   // FPU Use
   BOOL bFPUUsed;
 
+  // Processor Affinity 
+  BYTE bAffinity;
 
-  char vcPadding[11];
+  // Local APIC ID
+  BYTE bAPICID;
+
+  char vcPadding[9];
 } TCB;
 
 typedef struct kTCBPoolManagerStruct
 {
+  // SpinLock
+  SPINLOCK stSpinLock;
+
   // Task Pool
   TCB* pstStartAddress;
   int iMaxCount;
@@ -157,6 +168,10 @@ typedef struct kSchedulerStruct
   // Last Used FPU Task ID 
   QWORD qwLastFPUUsedTaskID;
 
+  // LoadBalancing Flag
+  BOOL bUseLoadBalancing;
+
+  char vcPadding[10];
 } SCHEDULER;
 #pragma pack(pop)
 
@@ -166,37 +181,45 @@ static void kInitializeTCBPOOL(void);
 static TCB* kAllocateTCB(void);
 static void kFreeTCB(QWORD qwID);
 static void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, void* pvStackAddress, QWORD qwStackSize);
-TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD qwEntryPointAddress);
+TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD qwEntryPointAddress, BYTE bAffinity);
 
 // Schedule
 void kInitializeScheduler(void);
-void kSetRunningTask(TCB* pstTask);
-int kGetReadyTaskCount(void);
-int kGetTaskCount(void);
+
+void kSetRunningTask(BYTE bAPICID, TCB* pstTask);
+TCB* kGetRunningTask(BYTE bAPICID);
+
+static TCB* kGetNextTaskToRun(BYTE bAPICID);
+
+int kGetReadyTaskCount(BYTE bAPICID);
+int kGetTaskCount(BYTE bAPICID);
 TCB* kGetTCBInTCBPool(int iOffset);
-TCB* kGetRunningTask(void);
-static TCB* kGetNextTaskToRun(void);
-static BOOL kAddTaskToReadyList(TCB* pstTask);
-static TCB* kRemoveTaskFromReadyList(QWORD qwTaskID);
-void kSchedule(void);
+static BOOL kAddTaskToReadyList(BYTE bAPICID, TCB* pstTask);
+static TCB* kRemoveTaskFromReadyList(BYTE bAPICID, QWORD qwTaskID);
+BOOL kSchedule(void);
 BOOL kChangePriority(QWORD qwTaskID, BYTE bPriority);
 BOOL kScheduleInInterrupt(void);
-void kDecreaseProcessorTime(void);
-BOOL kIsProcessorTimeExpired(void);
+void kDecreaseProcessorTime(BYTE bAPICID);
+BOOL kIsProcessorTimeExpired(BYTE bAPICID);
 BOOL kEndTask(QWORD qwTaskID);
 void kExitTask(void);
 BOOL kIsTaskExist(QWORD qwID);
-QWORD kGetProcessorLoad(void);
+QWORD kGetProcessorLoad(BYTE bAPICID);
+void kAddTaskToScheduleWithLoadBalancing(TCB* pstTask);
+static BYTE kFindSchedulerOfMinimumTaskCount(const TCB* pstTask);
+BYTE kSetTaskLoadBalancing(BYTE bAPICID, BOOL bUseLoadBalancing);
+static BOOL kFindSchedulerOfTaskAndLock(QWORD qwTaskID, BYTE* pbAPICID);
+BOOL kChangeProcessorAffinity(QWORD qwTaskID, BYTE bAffinity);
 
 // idle task
 void kIdleTask(void);
-void kHaltProcessorByLoad(void);
+void kHaltProcessorByLoad(BYTE bAPICID);
 
 // Thread
 static TCB* kGetProcessByThread(TCB* pstThread);
 
 // FPU
-QWORD kGetLastFPUUsedTaskID(void);
-void kSetLastFPUUsedTaskID(QWORD qwTaskID);
+QWORD kGetLastFPUUsedTaskID(BYTE bAPICID);
+void kSetLastFPUUsedTaskID(BYTE bAPICID, QWORD qwTaskID);
 
 #endif // !__TASK_H__
