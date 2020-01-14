@@ -206,7 +206,7 @@ BOOL kGetHDDInformation(HDDINFORMATION* pstInformation)
 }
 
 /*
-  Read Cluster Table 
+  Read Cluster Table
 */
 static BOOL kReadClusterLinkTable(DWORD dwOffset, BYTE* pbBuffer) {
   // if use cache
@@ -327,7 +327,7 @@ BOOL kFlushFileSystemCache(void)
       if (kInternalWriteClusterLinkTableWithoutCache(pstCacheBuffer[i].dwTag, pstCacheBuffer[i].pbBuffer) == FALSE) {
         return FALSE;
       }
-      pstCacheBuffer[i].bChanged == FALSE;
+      pstCacheBuffer[i].bChanged = FALSE;
     }
   }
 
@@ -338,7 +338,7 @@ BOOL kFlushFileSystemCache(void)
       if (kInternalWriteClusterWithoutCache(pstCacheBuffer[i].dwTag, pstCacheBuffer[i].pbBuffer) == FALSE) {
         return FALSE;
       }
-      pstCacheBuffer[i].bChanged == FALSE;
+      pstCacheBuffer[i].bChanged = FALSE;
     }
   }
 
@@ -381,7 +381,7 @@ static BOOL kInternalWriteClusterLinkTableWithCache(DWORD dwOffset,
   // Read Cache buffer
   pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
   if (pstCacheBuffer != NULL) {
-    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, 512);
+    kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, 512);
 
     pstCacheBuffer->bChanged = TRUE;
     return TRUE;
@@ -431,7 +431,7 @@ static BOOL kInternalReadClusterWithCache(DWORD dwOffset, BYTE* pbBuffer)
   CACHEBUFFER* pstCacheBuffer;
 
   // Read Cache buffer
-  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  pstCacheBuffer = kFindCacheBuffer(CACHE_DATAAREA, dwOffset);
   if (pstCacheBuffer != NULL) {
     kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, FILESYSTEM_CLUSTERSIZE);
     return TRUE;
@@ -443,7 +443,7 @@ static BOOL kInternalReadClusterWithCache(DWORD dwOffset, BYTE* pbBuffer)
   }
 
   // Update Cache
-  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_DATAAREA);
   if (pstCacheBuffer == NULL) {
     return FALSE;
   }
@@ -486,16 +486,16 @@ static BOOL kInternalWriteClusterWithCache(DWORD dwOffset, BYTE* pbBuffer)
   CACHEBUFFER* pstCacheBuffer;
 
   // Read Cache buffer
-  pstCacheBuffer = kFindCacheBuffer(CACHE_CLUSTERLINKTABLEAREA, dwOffset);
+  pstCacheBuffer = kFindCacheBuffer(CACHE_DATAAREA, dwOffset);
   if (pstCacheBuffer != NULL) {
-    kMemCpy(pbBuffer, pstCacheBuffer->pbBuffer, FILESYSTEM_CLUSTERSIZE);
+    kMemCpy(pstCacheBuffer->pbBuffer, pbBuffer, FILESYSTEM_CLUSTERSIZE);
 
     pstCacheBuffer->bChanged = TRUE;
     return TRUE;
   }
 
   // Cache dosen't exist, Copy to Cache
-  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_CLUSTERLINKTABLEAREA);
+  pstCacheBuffer = kAllocateCacheBufferWithFlush(CACHE_DATAAREA);
   if (pstCacheBuffer == NULL) {
     return FALSE;
   }
@@ -1009,7 +1009,7 @@ DWORD kWriteFile(const void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFil
   while (dwWriteCount != dwTotalCount) {
     // if current cluster is last cluster
     if (pstFileHandle->dwCurrentClusterIndex == FILESYSTEM_LASTCLUSTER) {
-      
+
       // allocate free cluster to link
       dwAllocatedClusterIndex = kFindFreeCluster();
       if (dwAllocatedClusterIndex == FILESYSTEM_LASTCLUSTER) {
