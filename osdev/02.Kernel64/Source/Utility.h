@@ -13,6 +13,7 @@ QWORD kGetTickCount(void);
 void kSleep(QWORD qwMillisecond);
 
 void kMemSet(void* pvDestination, BYTE bData, int iSize);
+inline void kMemSetWord(void* pvDestination, WORD wData, int iWordSize);
 int kMemCpy(void* pvDestination, const void* pvSource, int iSize);
 int kMemCmp(const void* pvDestination, const void* pvSource, int iSize);
 BOOL kSetInterruptFlag(BOOL bEnableInterrupt);

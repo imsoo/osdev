@@ -2,7 +2,7 @@
 
 static VBEMODEINFOBLOCK* gs_pstVBEModeBlockInfo = (VBEMODEINFOBLOCK*)VBE_MODEINFOBLOCKADDRESS;
 
-inline VBEMODEINFOBLOCK* kGetVBEModeInfoBlock(void)
+VBEMODEINFOBLOCK* kGetVBEModeInfoBlock(void)
 {
   return gs_pstVBEModeBlockInfo;
 }

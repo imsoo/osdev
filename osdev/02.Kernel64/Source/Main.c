@@ -12,6 +12,7 @@
 #include "SerialPort.h"
 #include "MultiProcessor.h"
 #include "VBE.h"
+#include "2DGraphics.h"
 
 // AP C Kernele Entry
 void MainForApplicationProcessor(void);
@@ -161,34 +162,225 @@ void MainForApplicationProcessor(void)
   kIdleTask();
 }
 
+#define ABS( x )    ( ( ( x ) >= 0 ) ? ( x ) : -( x ) )
+
+/*
+  Get Random X, Y
+*/
+void kGetRandomXY(int* piX, int* piY)
+{
+  int iRandom;
+
+  // X
+  iRandom = kRandom();
+  *piX = ABS(iRandom) % 1000;
+
+  // Y
+  iRandom = kRandom();
+  *piY = ABS(iRandom) % 700;
+}
+
+/*
+  Get Random Color
+*/
+COLOR kGetRandomColor(void)
+{
+  int iR, iG, iB;
+  int iRandom;
+
+  iRandom = kRandom();
+  iR = ABS(iRandom) % 256;
+
+  iRandom = kRandom();
+  iG = ABS(iRandom) % 256;
+
+  iRandom = kRandom();
+  iB = ABS(iRandom) % 256;
+
+  return RGB(iR, iG, iB);
+}
+
+/*
+  Draw Window Frame
+*/
+void kDrawWindowFrame(int iX, int iY, int iWidth, int iHeight, const char* pcTitle)
+{
+  char* pcTestString1 = "Window prototype";
+  char* pcTestString2 = "Hello, World";
+
+  kDrawRect(iX, iY, iX + iWidth, iY + iHeight, RGB(109, 218, 22), FALSE);
+  kDrawRect(iX + 1, iY + 1, iX + iWidth - 1, iY + iHeight - 1, RGB(109, 218, 22),
+    FALSE);
+
+  // Title BackGround
+  kDrawRect(iX, iY + 3, iX + iWidth - 1, iY + 21, RGB(79, 204, 11), TRUE);
+  // Title Text
+  kDrawText(iX + 6, iY + 3, RGB(255, 255, 255), RGB(79, 204, 11),
+    pcTitle, kStrLen(pcTitle));
+
+  // Title Box Line 
+  kDrawLine(iX + 1, iY + 1, iX + iWidth - 1, iY + 1, RGB(183, 249, 171));
+  kDrawLine(iX + 1, iY + 2, iX + iWidth - 1, iY + 2, RGB(150, 210, 140));
+
+  kDrawLine(iX + 1, iY + 2, iX + 1, iY + 20, RGB(183, 249, 171));
+  kDrawLine(iX + 2, iY + 2, iX + 2, iY + 20, RGB(150, 210, 140));
+
+  kDrawLine(iX + 2, iY + 19, iX + iWidth - 2, iY + 19, RGB(46, 59, 30));
+  kDrawLine(iX + 2, iY + 20, iX + iWidth - 2, iY + 20, RGB(46, 59, 30));
+
+  // Close button Box
+  kDrawRect(iX + iWidth - 2 - 18, iY + 1, iX + iWidth - 2, iY + 19,
+    RGB(255, 255, 255), TRUE);
+   
+  // Close button  Box Line
+  kDrawRect(iX + iWidth - 2, iY + 1, iX + iWidth - 2, iY + 19 - 1,
+    RGB(86, 86, 86), TRUE);
+  kDrawRect(iX + iWidth - 2 - 1, iY + 1, iX + iWidth - 2 - 1, iY + 19 - 1,
+    RGB(86, 86, 86), TRUE);
+  kDrawRect(iX + iWidth - 2 - 18 + 1, iY + 19, iX + iWidth - 2, iY + 19,
+    RGB(86, 86, 86), TRUE);
+  kDrawRect(iX + iWidth - 2 - 18 + 1, iY + 19 - 1, iX + iWidth - 2, iY + 19 - 1,
+    RGB(86, 86, 86), TRUE);
+
+  kDrawLine(iX + iWidth - 2 - 18, iY + 1, iX + iWidth - 2 - 1, iY + 1,
+    RGB(229, 229, 229));
+  kDrawLine(iX + iWidth - 2 - 18, iY + 1 + 1, iX + iWidth - 2 - 2, iY + 1 + 1,
+    RGB(229, 229, 229));
+  kDrawLine(iX + iWidth - 2 - 18, iY + 1, iX + iWidth - 2 - 18, iY + 19,
+    RGB(229, 229, 229));
+  kDrawLine(iX + iWidth - 2 - 18 + 1, iY + 1, iX + iWidth - 2 - 18 + 1, iY + 19 - 1,
+    RGB(229, 229, 229));
+
+  // Close Sign (X)
+  kDrawLine(iX + iWidth - 2 - 18 + 4, iY + 1 + 4, iX + iWidth - 2 - 4, iY + 19 - 4,
+    RGB(71, 199, 21));
+  kDrawLine(iX + iWidth - 2 - 18 + 5, iY + 1 + 4, iX + iWidth - 2 - 4, iY + 19 - 5,
+    RGB(71, 199, 21));
+  kDrawLine(iX + iWidth - 2 - 18 + 4, iY + 1 + 5, iX + iWidth - 2 - 5, iY + 19 - 4,
+    RGB(71, 199, 21));
+
+  kDrawLine(iX + iWidth - 2 - 18 + 4, iY + 19 - 4, iX + iWidth - 2 - 4, iY + 1 + 4,
+    RGB(71, 199, 21));
+  kDrawLine(iX + iWidth - 2 - 18 + 5, iY + 19 - 4, iX + iWidth - 2 - 4, iY + 1 + 5,
+    RGB(71, 199, 21));
+  kDrawLine(iX + iWidth - 2 - 18 + 4, iY + 19 - 5, iX + iWidth - 2 - 5, iY + 1 + 4,
+    RGB(71, 199, 21));
+
+  // Content Box
+  kDrawRect(iX + 2, iY + 21, iX + iWidth - 2, iY + iHeight - 2,
+    RGB(255, 255, 255), TRUE);
+
+  // Content String
+  kDrawText(iX + 10, iY + 30, RGB(0, 0, 0), RGB(255, 255, 255), pcTestString1,
+    kStrLen(pcTestString1));
+  kDrawText(iX + 10, iY + 50, RGB(0, 0, 0), RGB(255, 255, 255), pcTestString2,
+    kStrLen(pcTestString2));
+}
+
 /*
   Main for Graphic Mode Test
 */
 void kStartGraphicModeTest()
 {
   VBEMODEINFOBLOCK* pstVBEMode;
-  WORD* pwFrameBufferAddress;
-  WORD wColor = 0;
-  int iBandHeight;
-  int i, j;
+  int iX1, iY1, iX2, iY2;
+  COLOR stColor1, stColor2;
+  int i;
+  char* vpcString[] = { "Pixel", "Line", "Rectangle", "Circle", "Hello, World" };
+
+  // Print String Pixel
+  kDrawText(0, 0, RGB(255, 255, 255), RGB(0, 0, 0), vpcString[0],
+    kStrLen(vpcString[0]));
+  kDrawPixel(1, 20, RGB(255, 255, 255));
+  kDrawPixel(2, 20, RGB(255, 255, 255));
+
+  // Draw Red Line 
+  kDrawText(0, 25, RGB(255, 0, 0), RGB(0, 0, 0), vpcString[1],
+    kStrLen(vpcString[1]));
+  kDrawLine(20, 50, 1000, 50, RGB(255, 0, 0));
+  kDrawLine(20, 50, 1000, 100, RGB(255, 0, 0));
+  kDrawLine(20, 50, 1000, 150, RGB(255, 0, 0));
+  kDrawLine(20, 50, 1000, 200, RGB(255, 0, 0));
+  kDrawLine(20, 50, 1000, 250, RGB(255, 0, 0));
+
+  // Draw Green Rect
+  kDrawText(0, 180, RGB(0, 255, 0), RGB(0, 0, 0), vpcString[2],
+    kStrLen(vpcString[2]));
+  kDrawRect(20, 200, 70, 250, RGB(0, 255, 0), FALSE);
+  kDrawRect(120, 200, 220, 300, RGB(0, 255, 0), TRUE);
+  kDrawRect(270, 200, 420, 350, RGB(0, 255, 0), FALSE);
+  kDrawRect(470, 200, 670, 400, RGB(0, 255, 0), TRUE);
+
+  // Draw Blue Circle
+  kDrawText(0, 550, RGB(0, 0, 255), RGB(0, 0, 0), vpcString[3],
+    kStrLen(vpcString[3]));
+  kDrawCircle(45, 600, 25, RGB(0, 0, 255), FALSE);
+  kDrawCircle(170, 600, 50, RGB(0, 0, 255), TRUE);
+  kDrawCircle(345, 600, 75, RGB(0, 0, 255), FALSE);
+  kDrawCircle(570, 600, 100, RGB(0, 0, 255), TRUE);
 
   kGetCh();
 
-  // Get Frame Buffer Address
-  pstVBEMode = kGetVBEModeInfoBlock();
-  pwFrameBufferAddress = (WORD*)((QWORD)pstVBEMode->dwPhysicalBasePointer);
+  do
+  {
+    // Rnadom Pixel
+    for (i = 0; i < 100; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      stColor1 = kGetRandomColor();
 
-  iBandHeight = pstVBEMode->wYResolution / 32;
+      kDrawPixel(iX1, iY1, stColor1);
+    }
 
-  while (1) {
-    for (j = 0; j < pstVBEMode->wYResolution; j++) {
-      for (i = 0; i < pstVBEMode->wXResolution; i++) {
-        pwFrameBufferAddress[(j * pstVBEMode->wXResolution) + i] = wColor;
-      }
+    // Rnadom Line
+    for (i = 0; i < 100; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      kGetRandomXY(&iX2, &iY2);
+      stColor1 = kGetRandomColor();
+      kDrawLine(iX1, iY1, iX2, iY2, stColor1);
+    }
 
-      if ((j % iBandHeight) == 0) {
-        wColor = kRandom() & 0xFFFF;
-      }
+    // Rnadom Rect
+    for (i = 0; i < 20; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      kGetRandomXY(&iX2, &iY2);
+      stColor1 = kGetRandomColor();
+
+      kDrawRect(iX1, iY1, iX2, iY2, stColor1, kRandom() % 2);
+    }
+
+    // Rnadom Circle
+    for (i = 0; i < 100; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      stColor1 = kGetRandomColor();
+
+      kDrawCircle(iX1, iY1, ABS(kRandom() % 50 + 1), stColor1, kRandom() % 2);
+    }
+
+    // Rnadom Text
+    for (i = 0; i < 100; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      stColor1 = kGetRandomColor();
+      stColor2 = kGetRandomColor();
+      kDrawText(iX1, iY1, stColor1, stColor2, vpcString[4],
+        kStrLen(vpcString[4]));
+    }
+  } while (kGetCh() != 'q');
+
+  while (1)
+  {
+    // Background
+    kDrawRect(0, 0, 1024, 768, RGB(232, 255, 232), TRUE);
+
+    // Random WindowFrame
+    for (i = 0; i < 3; i++)
+    {
+      kGetRandomXY(&iX1, &iY1);
+      kDrawWindowFrame(iX1, iY1, 400, 200, "Window prototype");
     }
 
     kGetCh();

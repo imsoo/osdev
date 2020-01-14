@@ -77,6 +77,6 @@ typedef struct kVBEInfoBlockStruct
 #pragma pack( pop )
 
 // function
-VBEMODEINFOBLOCK* kGetVBEModeInfoBlock(void);
+inline VBEMODEINFOBLOCK* kGetVBEModeInfoBlock(void);
 
 #endif /*__VBE_H__*/
