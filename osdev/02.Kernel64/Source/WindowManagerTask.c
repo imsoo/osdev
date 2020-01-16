@@ -10,17 +10,10 @@
 */
 void kStartWindowManager(void)
 {
-  VBEMODEINFOBLOCK* pstVBEMode;
-  int iRelativeX, iRelativeY;
   int iMouseX, iMouseY;
-  BYTE bButton;
-  QWORD qwWindowID;
-  TCB* pstTask;
-  char vcTempTitle[WINDOW_TITLEMAXLENGTH];
-  int iWindowCount = 0;
-
-  // Get Window Manager Task's TCB
-  pstTask = kGetRunningTask(kGetAPICID());
+  BOOL bMouseDataResult;
+  BOOL bKeyDataResult;
+  BOOL bEventQueueResult;
 
   // Init GUI
   kInitializeGUISystem();
@@ -31,41 +24,250 @@ void kStartWindowManager(void)
 
   while (1)
   {
-    // Wait Mouse
-    if (kGetMouseDataFromMouseQueue(&bButton, &iRelativeX, &iRelativeY) ==
-      FALSE)
+    // Mouse
+    bMouseDataResult = kProcessMouseData();
+
+    // Key
+    bKeyDataResult = kProcessKeyData();
+
+    // Event
+    bEventQueueResult = FALSE;
+    while (kProcessEventQueueData() == TRUE)
     {
-      kSleep(0);
-      continue;
+      bEventQueueResult = TRUE;
     }
 
-    // Calc Current Mouse Position
-    kGetCursorPosition(&iMouseX, &iMouseY);
-    iMouseX += iRelativeX;
-    iMouseY += iRelativeY;
-
-    // L Button Click
-    if (bButton & MOUSE_LBUTTONDOWN)
+    if ((bMouseDataResult == FALSE) &&
+      (bKeyDataResult == FALSE) &&
+      (bEventQueueResult == FALSE))
     {
+      kSleep(0);
+    }
+  }
+}
+
+/*
+  Process Mouse Packet
+*/
+BOOL kProcessMouseData(void)
+{
+  QWORD qwWindowIDUnderMouse;
+  BYTE bButtonStatus;
+  int iRelativeX, iRelativeY;
+  int iMouseX, iMouseY;
+  int iPreviousMouseX, iPreviousMouseY;
+  BYTE bChangedButton;
+  RECT stWindowArea;
+  EVENT stEvent;
+  WINDOWMANAGER* pstWindowManager;
+  char vcTempTitle[WINDOW_TITLEMAXLENGTH];
+  static int iWindowCount = 0;
+  QWORD qwWindowID;
+
+  if (kGetMouseDataFromMouseQueue(&bButtonStatus, &iRelativeX, &iRelativeY) == FALSE) {
+    return FALSE;
+  }
+
+  pstWindowManager = kGetWindowManager();
+
+  // Update Cursor
+  kGetCursorPosition(&iMouseX, &iMouseY);
+
+  iPreviousMouseX = iMouseX;
+  iPreviousMouseY = iMouseY;
+  
+  iMouseX += iRelativeX;
+  iMouseY += iRelativeY;
+  kMoveCursor(iMouseX, iMouseY);
+  kGetCursorPosition(&iMouseX, &iMouseY);
+
+  qwWindowIDUnderMouse = kFindWindowByPoint(iMouseX, iMouseY);
+
+  bChangedButton = pstWindowManager->bPreviousButtonStatus ^ bButtonStatus;
+
+  if (bChangedButton & MOUSE_LBUTTONDOWN) {
+
+    // L Button Down
+    if (bButtonStatus & MOUSE_LBUTTONDOWN) {
+
+      // Move to Top
+      if (qwWindowIDUnderMouse != pstWindowManager->qwBackgroundWindowID)
+      {
+        kMoveWindowToTop(qwWindowIDUnderMouse);
+      }
+
+      // if in Title Bar
+      if (kIsInTitleBar(qwWindowIDUnderMouse, iMouseX, iMouseY) == TRUE)
+      {
+        // Close button
+        if (kIsInCloseButton(qwWindowIDUnderMouse, iMouseX, iMouseY) == TRUE)
+        {
+          // Send Close Event
+          kSetWindowEvent(qwWindowIDUnderMouse, EVENT_WINDOW_CLOSE,
+            &stEvent);
+          kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+
+          // Temp 
+          kDeleteWindow(qwWindowIDUnderMouse);
+        }
+        // Move
+        else
+        {
+          pstWindowManager->bWindowMoveMode = TRUE;
+          pstWindowManager->qwMovingWindowID = qwWindowIDUnderMouse;
+        }
+      }
+      // In Window Frame
+      else {
+        kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_LBUTTONDOWN,
+          iMouseX, iMouseY, bButtonStatus, &stEvent);
+        kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+      }
+    }
+    // L Button Up
+    else {
+      if (pstWindowManager->bWindowMoveMode == TRUE) {
+        pstWindowManager->bWindowMoveMode = FALSE;
+        pstWindowManager->qwMovingWindowID = WINDOW_INVALIDID;
+      }
+      else {
+        kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_LBUTTONUP,
+          iMouseX, iMouseY, bButtonStatus, &stEvent);
+        kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+      }
+    }
+
+  }
+  else if (bChangedButton & MOUSE_RBUTTONDOWN) {
+
+    // R Button Down
+    if (bButtonStatus & MOUSE_RBUTTONDOWN) {
+      kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_RBUTTONDOWN,
+        iMouseX, iMouseY, bButtonStatus, &stEvent);
+      kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+
+      // Temp
       kSPrintf(vcTempTitle, "Window %d", iWindowCount++);
       qwWindowID = kCreateWindow(iMouseX - 10, iMouseY - WINDOW_TITLEBAR_HEIGHT / 2,
         400, 200, WINDOW_FLAGS_DRAWFRAME | WINDOW_FLAGS_DRAWTITLE, vcTempTitle);
 
-      kDrawText(qwWindowID, 10, WINDOW_TITLEBAR_HEIGHT + 10, RGB(0, 0, 0),
-        WINDOW_COLOR_BACKGROUND, "Window", 7);
-      kDrawText(qwWindowID, 10, WINDOW_TITLEBAR_HEIGHT + 30, RGB(0, 0, 0),
+      kDrawText(qwWindowID, 10, WINDOW_TITLEBAR_HEIGHT + 10, WINDOW_COLOR_FRAMETEXT,
         WINDOW_COLOR_BACKGROUND, "Hello, World", 13);
       kShowWindow(qwWindowID, TRUE);
     }
-    // R Button
-    else if (bButton & MOUSE_RBUTTONDOWN)
-    {
-      // Delete All Window
-      kDeleteAllWindowInTaskID(pstTask->stLink.qwID);
-      iWindowCount = 0;
+    // R Button Up
+    else {
+      kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_RBUTTONUP,
+        iMouseX, iMouseY, bButtonStatus, &stEvent);
+      kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
     }
 
-    kMoveCursor(iMouseX, iMouseY);
   }
+  else if (bChangedButton & MOUSE_MBUTTONDOWN) {
+
+    // M Button Down
+    if (bButtonStatus & MOUSE_MBUTTONDOWN) {
+      kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_MBUTTONDOWN,
+        iMouseX, iMouseY, bButtonStatus, &stEvent);
+      kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+    }
+    // M Button Up
+    else {
+      kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_MBUTTONUP,
+        iMouseX, iMouseY, bButtonStatus, &stEvent);
+      kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+    }
+
+  }
+  // move
+  else {
+    kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_MOVE,
+      iMouseX, iMouseY, bButtonStatus, &stEvent);
+    kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
+  }
+
+  // Process window Move 
+  if (pstWindowManager->bWindowMoveMode == TRUE)
+  {
+    if (kGetWindowArea(pstWindowManager->qwMovingWindowID, &stWindowArea) == TRUE)
+    {
+      // Move Window
+      kMoveWindow(pstWindowManager->qwMovingWindowID,
+        stWindowArea.iX1 + iMouseX - iPreviousMouseX,
+        stWindowArea.iY1 + iMouseY - iPreviousMouseY);
+    }
+    else
+    {
+      pstWindowManager->bWindowMoveMode = FALSE;
+      pstWindowManager->qwMovingWindowID = WINDOW_INVALIDID;
+    }
+  }
+
+  pstWindowManager->bPreviousButtonStatus = bButtonStatus;
+  return TRUE;
 }
 
+/*
+  Process Keyboard Data
+*/
+BOOL kProcessKeyData(void)
+{
+  KEYDATA stKeyData;
+  EVENT stEvent;
+  QWORD qwAcitveWindowID;
+
+  if (kGetKeyFromKeyQueue(&stKeyData) == FALSE)
+  {
+    return FALSE;
+  }
+
+  // Send Key to Top Window
+  qwAcitveWindowID = kGetTopWindowID();
+  kSetKeyEvent(qwAcitveWindowID, &stKeyData, &stEvent);
+  return kSendEventToWindow(qwAcitveWindowID, &stEvent);
+}
+
+/*
+  Process Event
+*/
+BOOL kProcessEventQueueData(void)
+{
+  EVENT stEvent;
+  WINDOWEVENT* pstWindowEvent;
+  QWORD qwWindowID;
+  RECT stArea;
+
+  if (kReceiveEventFromWindowManagerQueue(&stEvent) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstWindowEvent = &(stEvent.stWindowEvent);
+
+  switch (stEvent.qwType)
+  {
+  case EVENT_WINDOWMANAGER_UPDATESCREENBYID:
+    if (kGetWindowArea(pstWindowEvent->qwWindowID, &stArea) == TRUE)
+    {
+      kRedrawWindowByArea(&stArea);
+    }
+    break;
+
+  case EVENT_WINDOWMANAGER_UPDATESCREENBYWINDOWAREA:
+    if (kConvertRectClientToScreen(pstWindowEvent->qwWindowID,
+      &(pstWindowEvent->stArea), &stArea) == TRUE)
+    {
+      kRedrawWindowByArea(&stArea);
+    }
+    break;
+
+  case EVENT_WINDOWMANAGER_UPDATESCREENBYSCREENAREA:
+    kRedrawWindowByArea(&(pstWindowEvent->stArea));
+    break;
+
+  default:
+    break;
+  }
+
+  return TRUE;
+}

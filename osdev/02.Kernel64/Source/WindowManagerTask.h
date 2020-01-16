@@ -3,5 +3,8 @@
 
 // function
 void kStartWindowManager(void);
+BOOL kProcessMouseData(void);
+BOOL kProcessKeyData(void);
+BOOL kProcessEventQueueData(void);
 
 #endif /*__WINDOWMANAGER_H__*/

@@ -132,6 +132,7 @@ void kInitializeGUISystem(void)
 {
   VBEMODEINFOBLOCK* pstModeInfo;
   QWORD qwBackgroundWindowID;
+  EVENT* pstEventBuffer;
 
   kInitializeWindowPool();
 
@@ -155,6 +156,14 @@ void kInitializeGUISystem(void)
   // Init Window List
   kInitializeList(&(gs_stWindowManager.stWindowList));
 
+  // Init Event Queue
+  pstEventBuffer = (EVENT*)kAllocateMemory(sizeof(EVENT) * EVENTQUEUE_WNIDOWMANAGERMAXCOUNT);
+  if (pstEventBuffer == NULL) {
+    kPrintf("Window Manager Event Queue Allocate Fail\n");
+    while (1);
+  }
+  kInitializeQueue(&(gs_stWindowManager.stEventQueue), pstEventBuffer, EVENTQUEUE_WNIDOWMANAGERMAXCOUNT, sizeof(EVENT));
+
   // Create Background Window
   qwBackgroundWindowID = kCreateWindow(0, 0, pstModeInfo->wXResolution, pstModeInfo->wYResolution,
     0, WINDOW_BACKGROUNDWINDOWTITLE);
@@ -167,6 +176,14 @@ void kInitializeGUISystem(void)
 }
 
 /*
+  Get Window Manager
+*/
+WINDOWMANAGER* kGetWindowManager(void)
+{
+  return &gs_stWindowManager;
+}
+
+/*
   Create Window
 */
 QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
@@ -174,6 +191,8 @@ QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
 {
   WINDOW* pstWindow;
   TCB* pstTask;
+  QWORD qwActiveWindowID;
+  EVENT stEvent;
 
   // Check Window size 
   if ((iWidth <= 0) || (iHeight <= 0))
@@ -198,13 +217,24 @@ QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
   kMemCpy(pstWindow->vcWindowTitle, pcTitle, WINDOW_TITLEMAXLENGTH);
   pstWindow->vcWindowTitle[WINDOW_TITLEMAXLENGTH] = '\0';
 
+  // Allocate Event Queue
+  pstWindow->pstEventBuffer = (EVENT*)kAllocateMemory(EVENTQUEUE_WINDOWMAXCOUNT * sizeof(EVENT));
+
   // Allocate Window buffer
   pstWindow->pstWindowBuffer = (COLOR*)kAllocateMemory(iWidth * iHeight * sizeof(COLOR));
-  if (pstWindow == NULL)
+
+  if ((pstWindow->pstEventBuffer == NULL) ||
+    (pstWindow->pstWindowBuffer == NULL))
   {
+    kFreeMemory(pstWindow->pstEventBuffer);
+    kFreeMemory(pstWindow->pstWindowBuffer);
+
     kFreeWindow(pstWindow->stLink.qwID);
     return WINDOW_INVALIDID;
   }
+
+  // Inint Event Queue
+  kInitializeQueue(&(pstWindow->stEventQueue), pstWindow->pstEventBuffer, EVENTQUEUE_WINDOWMAXCOUNT, sizeof(EVENT));
 
   // Set Task ID
   pstTask = kGetRunningTask(kGetAPICID());
@@ -225,11 +255,13 @@ QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
   // Draw Title
   if (dwFlags & WINDOW_FLAGS_DRAWTITLE)
   {
-    kDrawWindowTitle(pstWindow->stLink.qwID, pcTitle);
+    kDrawWindowTitle(pstWindow->stLink.qwID, pcTitle, TRUE);
   }
 
   // --- CRITCAL SECTION BEGIN ---
   kLock(&(gs_stWindowManager.stLock));
+
+  qwActiveWindowID = kGetTopWindowID();
 
   // Add Window List 
   kAddListToTail(&gs_stWindowManager.stWindowList, pstWindow);
@@ -237,10 +269,17 @@ QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
   kUnlock(&(gs_stWindowManager.stLock));
   // --- CRITCAL SECTION END ---
 
-  // if Show Flag is set, Draw Window
-  if (dwFlags & WINDOW_FLAGS_SHOW)
+  // Send WINDOW Event
+  kUpdateScreenByID(pstWindow->stLink.qwID);
+  kSetWindowEvent(pstWindow->stLink.qwID, EVENT_WINDOW_SELECT, &stEvent);
+  kSendEventToWindow(pstWindow->stLink.qwID, &stEvent);
+
+  // Prev Window Deselect Event
+  if (qwActiveWindowID != gs_stWindowManager.qwBackgroundWindowID)
   {
-    kRedrawWindowByArea(&(pstWindow->stArea));
+    kUpdateWindowTitle(qwActiveWindowID, FALSE);
+    kSetWindowEvent(qwActiveWindowID, EVENT_WINDOW_DESELECT, &stEvent);
+    kSendEventToWindow(qwActiveWindowID, &stEvent);
   }
 
   return pstWindow->stLink.qwID;
@@ -254,12 +293,14 @@ BOOL kDeleteWindow(QWORD qwWindowID)
 {
   WINDOW* pstWindow;
   RECT stArea;
+  QWORD qwActiveWindowID;
+  BOOL bActiveWindow;
+  EVENT stEvent;
 
   // --- CRITCAL SECTION BEGIN 1 ---
   kLock(&(gs_stWindowManager.stLock));
 
   // Find Window
-
   // --- CRITCAL SECTION BEGIN 2 ---
   pstWindow = kGetWindowWithWindowLock(qwWindowID);
   if (pstWindow == NULL)
@@ -273,6 +314,14 @@ BOOL kDeleteWindow(QWORD qwWindowID)
   // Store Window Area for Redraw
   kMemCpy(&stArea, &(pstWindow->stArea), sizeof(RECT));
 
+  qwActiveWindowID = kGetTopWindowID();
+  if (qwActiveWindowID == qwWindowID) {
+    bActiveWindow = TRUE;
+  }
+  else {
+    bActiveWindow = FALSE;
+  }
+
   // Remove Window in Window List
   if (kRemoveList(&(gs_stWindowManager.stWindowList), qwWindowID) == NULL)
   {
@@ -284,24 +333,40 @@ BOOL kDeleteWindow(QWORD qwWindowID)
     return FALSE;
   }
 
-  // --- CRITCAL SECTION BEGIN 3 ---
-  kLock(&(pstWindow->stLock));
-
   // Free Window buffer
   kFreeMemory(pstWindow->pstWindowBuffer);
+  pstWindow->pstWindowBuffer = NULL;
+
+  // Free Window Event Queue
+  kFreeMemory(pstWindow->pstEventBuffer);
+  pstWindow->pstEventBuffer = NULL;
 
   kUnlock(&(pstWindow->stLock));
-  // --- CRITCAL SECTION END 3 ---
+  // --- CRITCAL SECTION END 2 ---
 
   // Free Window
   kFreeWindow(qwWindowID);
-  // --- CRITCAL SECTION END 2 ---
 
   kUnlock(&(gs_stWindowManager.stLock));
   // --- CRITCAL SECTION END 1 ---
 
   // Redraw 
-  kRedrawWindowByArea(&stArea);
+  kUpdateScreenByScreenArea(&stArea);
+
+
+  // if delete Top window, send WINDOW_SELECT_EVENT to next top WINDOW
+  if (bActiveWindow == TRUE)
+  {
+    qwActiveWindowID = kGetTopWindowID();
+
+    if (qwActiveWindowID != WINDOW_INVALIDID)
+    {
+      kUpdateWindowTitle(qwActiveWindowID, TRUE);
+
+      kSetWindowEvent(qwActiveWindowID, EVENT_WINDOW_SELECT, &stEvent);
+      kSendEventToWindow(qwActiveWindowID, &stEvent);
+    }
+  }
   return TRUE;
 }
 
@@ -396,6 +461,7 @@ WINDOW* kGetWindowWithWindowLock(QWORD qwWindowID)
 BOOL kShowWindow(QWORD qwWindowID, BOOL bShow)
 {
   WINDOW* pstWindow;
+  RECT stWindowArea;
 
   // Find Window
   // --- CRITCAL SECTION BEGIN ---
@@ -419,7 +485,15 @@ BOOL kShowWindow(QWORD qwWindowID, BOOL bShow)
   // --- CRITCAL SECTION END ---
 
   // Redraw
-  kRedrawWindowByArea(&(pstWindow->stArea));
+  if (bShow == TRUE)
+  {
+    kUpdateScreenByID(qwWindowID);
+  }
+  else
+  {
+    kGetWindowArea(qwWindowID, &stWindowArea);
+    kUpdateScreenByScreenArea(&stWindowArea);
+  }
   return TRUE;
 }
 
@@ -611,7 +685,7 @@ BOOL kDrawWindowBackground(QWORD qwWindowID)
   return TRUE;
 }
 
-BOOL kDrawWindowTitle(QWORD qwWindowID, const char* pcTitle)
+BOOL kDrawWindowTitle(QWORD qwWindowID, const char* pcTitle, BOOL bSelectedTitle)
 {
   WINDOW* pstWindow;
   int iWidth;
@@ -620,6 +694,7 @@ BOOL kDrawWindowTitle(QWORD qwWindowID, const char* pcTitle)
   int iY;
   RECT stArea;
   RECT stButtonArea;
+  COLOR stTitleBarTextColor;
 
   // Find window
   // --- CRITCAL SECTION BEGIN ---
@@ -634,15 +709,24 @@ BOOL kDrawWindowTitle(QWORD qwWindowID, const char* pcTitle)
   iHeight = kGetRectangleHeight(&(pstWindow->stArea));
   kSetRectangleData(0, 0, iWidth - 1, iHeight - 1, &stArea);
 
+  if (bSelectedTitle == TRUE)
+  {
+    stTitleBarTextColor = WINDOW_COLOR_TITLEBARACTIVATETEXT;
+  }
+  else
+  {
+    stTitleBarTextColor = WINDOW_COLOR_TITLEBARINACTIVATETEXT;
+  }
+
 
   // Fill Title Area
   kInternalDrawRect(&stArea, pstWindow->pstWindowBuffer,
     0, 3, iWidth - 1, WINDOW_TITLEBAR_HEIGHT - 1,
-    WINDOW_COLOR_TITLEBARBACKGROUND, TRUE);
+    WINDOW_COLOR_TITLEBARABACKGROUND, TRUE);
 
   // Draw Title Text
   kInternalDrawText(&stArea, pstWindow->pstWindowBuffer,
-    6, 3, WINDOW_COLOR_TITLEBARTEXT, WINDOW_COLOR_TITLEBARBACKGROUND,
+    10, 3, stTitleBarTextColor, WINDOW_COLOR_TITLEBARABACKGROUND,
     pcTitle, kStrLen(pcTitle));
 
   // Draw Title frame upper line
@@ -921,7 +1005,7 @@ BOOL kDrawPixel(QWORD qwWindowID, int iX, int iY, COLOR stColor)
   kInternalDrawPixel(&stArea, pstWindow->pstWindowBuffer, iX, iY,
     stColor);
 
-  kUnlock(&pstWindow->stLock);
+  kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
 
   return TRUE;
@@ -952,7 +1036,7 @@ BOOL kDrawLine(QWORD qwWindowID, int iX1, int iY1, int iX2, int iY2, COLOR stCol
   kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer, iX1, iY1,
     iX2, iY2, stColor);
 
-  kUnlock(&pstWindow->stLock);
+  kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
   return TRUE;
 }
@@ -982,7 +1066,7 @@ BOOL kDrawRect(QWORD qwWindowID, int iX1, int iY1, int iX2, int iY2,
   kInternalDrawRect(&stArea, pstWindow->pstWindowBuffer, iX1, iY1,
     iX2, iY2, stColor, bFill);
 
-  kUnlock(&pstWindow->stLock);
+  kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
 
   return TRUE;
@@ -1013,7 +1097,7 @@ BOOL kDrawCircle(QWORD qwWindowID, int iX, int iY, int iRadius, COLOR stColor,
   kInternalDrawCircle(&stArea, pstWindow->pstWindowBuffer,
     iX, iY, iRadius, stColor, bFill);
 
-  kUnlock(&pstWindow->stLock);
+  kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
 
   return TRUE;
@@ -1044,8 +1128,634 @@ BOOL kDrawText(QWORD qwWindowID, int iX, int iY, COLOR stTextColor,
   kInternalDrawText(&stArea, pstWindow->pstWindowBuffer, iX, iY,
     stTextColor, stBackgroundColor, pcString, iLength);
 
-  kUnlock(&pstWindow->stLock);
+  kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
 
+  return TRUE;
+}
+
+/*
+  Put Event To Window Event Queue
+*/
+BOOL kSendEventToWindow(QWORD qwWindowID, const EVENT* pstEvent)
+{
+  WINDOW* pstWindow;
+  BOOL bResult;
+
+  // Find window
+  // --- CRITCAL SECTION BEGIN ---
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow == NULL) {
+    return FALSE;
+  }
+
+  // Put Event
+  bResult = kPutQueue(&(pstWindow->stEventQueue), pstEvent);
+
+  kUnlock(&(pstWindow->stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+/*
+  Get Event From Window Event Queue
+*/
+BOOL kReceiveEventFromWindowQueue(QWORD qwWindowID, EVENT* pstEvent)
+{
+  WINDOW* pstWindow;
+  BOOL bResult;
+
+  // Find window
+  // --- CRITCAL SECTION BEGIN ---
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow == NULL) {
+    return FALSE;
+  }
+
+  // Get Event
+  bResult = kGetQueue(&(pstWindow->stEventQueue), pstEvent);
+
+  kUnlock(&(pstWindow->stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+/*
+  Put Event To Window Manager Event Queue
+*/
+BOOL kSendEventToWindowManager(const EVENT* pstEvent)
+{
+  BOOL bResult;
+
+  if (kIsQueueFull(&(gs_stWindowManager.stEventQueue)) == FALSE) {
+    // --- CRITCAL SECTION BEGIN ---
+    kLock(&(gs_stWindowManager.stLock));
+
+    // Put Event
+    bResult = kPutQueue(&(gs_stWindowManager.stEventQueue), pstEvent);
+
+    kUnlock(&(gs_stWindowManager.stLock));
+    // --- CRITCAL SECTION END ---
+  }
+
+  return bResult;
+}
+
+/*
+  Get Event From Window Manager Event Queue
+*/
+BOOL kReceiveEventFromWindowManagerQueue(EVENT* pstEvent)
+{
+  BOOL bResult;
+
+  if (kIsQueueEmpty(&(gs_stWindowManager.stEventQueue)) == FALSE) {
+    // --- CRITCAL SECTION BEGIN ---
+    kLock(&(gs_stWindowManager.stLock));
+
+    // Put Event
+    bResult = kGetQueue(&(gs_stWindowManager.stEventQueue), pstEvent);
+
+    kUnlock(&(gs_stWindowManager.stLock));
+    // --- CRITCAL SECTION END ---
+  }
+
+  return bResult;
+}
+
+/*
+  Set Mouse Event 
+  Mouse Point is Converted to Logical Point.
+*/
+BOOL kSetMouseEvent(QWORD qwWindowID, QWORD qwEventType, int iMouseX, int iMouseY,
+  BYTE bButtonStatus, EVENT* pstEvent)
+{
+  POINT stMouseXYInWindow;
+  POINT stMouseXY;
+
+  switch (qwEventType)
+  {
+  case EVENT_MOUSE_MOVE:
+  case EVENT_MOUSE_LBUTTONDOWN:
+  case EVENT_MOUSE_LBUTTONUP:
+  case EVENT_MOUSE_RBUTTONDOWN:
+  case EVENT_MOUSE_RBUTTONUP:
+  case EVENT_MOUSE_MBUTTONDOWN:
+  case EVENT_MOUSE_MBUTTONUP:
+    stMouseXY.iX = iMouseX;
+    stMouseXY.iY = iMouseY;
+
+    if (kConvertPointScreenToClient(qwWindowID, &stMouseXY, &stMouseXYInWindow) == FALSE) {
+      return FALSE;
+    }
+
+    pstEvent->qwType = qwEventType;
+    pstEvent->stMouseEvent.qwWindowID = qwWindowID;
+    pstEvent->stMouseEvent.bButtonStatus = bButtonStatus;
+    kMemCpy(&(pstEvent->stMouseEvent.stPoint), &stMouseXYInWindow, sizeof(POINT));
+    break;
+  default:
+    return FALSE;
+    break;
+  }
+  return TRUE;
+}
+
+/*
+  Set Window Event
+  Window Point is Physical Point.
+*/
+BOOL kSetWindowEvent(QWORD qwWindowID, QWORD qwEventType, EVENT* pstEvent)
+{
+  RECT stArea;
+
+  switch (qwEventType)
+  {
+  case EVENT_WINDOW_SELECT:
+  case EVENT_WINDOW_DESELECT:
+  case EVENT_WINDOW_MOVE:
+  case EVENT_WINDOW_RESIZE:
+  case EVENT_WINDOW_CLOSE:
+
+    pstEvent->qwType = qwEventType;
+    pstEvent->stWindowEvent.qwWindowID = qwWindowID;
+    if (kGetWindowArea(qwWindowID, &stArea) == FALSE)
+    {
+      return FALSE;
+    }
+
+    kMemCpy(&(pstEvent->stWindowEvent.stArea), &stArea, sizeof(RECT));
+    break;
+
+  default:
+    return FALSE;
+    break;
+  }
+  return TRUE;
+}
+
+/*
+  Set Key Event
+*/
+void kSetKeyEvent(QWORD qwWindow, const KEYDATA* pstKeyData, EVENT* pstEvent)
+{
+  if (pstKeyData->bFlags & KEY_FLAGS_DOWN)
+  {
+    pstEvent->qwType = EVENT_KEY_DOWN;
+  }
+  else
+  {
+    pstEvent->qwType = EVENT_KEY_UP;
+  }
+
+  pstEvent->stKeyEvent.bASCIICode = pstKeyData->bASCIICode;
+  pstEvent->stKeyEvent.bScanCode = pstKeyData->bScanCode;
+  pstEvent->stKeyEvent.bFlags = pstKeyData->bFlags;
+}
+
+/*
+  Send UPDATE SCREEN Event to WindowManager
+*/
+BOOL kUpdateScreenByID(QWORD qwWindowID)
+{
+  EVENT stEvent;
+  WINDOW* pstWindow;
+
+  pstWindow = kGetWindow(qwWindowID);
+  if ((pstWindow == NULL) &&
+    ((pstWindow->dwFlags & WINDOW_FLAGS_SHOW) == 0))
+  {
+    return FALSE;
+  }
+
+  stEvent.qwType = EVENT_WINDOWMANAGER_UPDATESCREENBYID;
+  stEvent.stWindowEvent.qwWindowID = qwWindowID;
+
+  return kSendEventToWindowManager(&stEvent);
+}
+
+/*
+  Send UPDATE SCREEN WINDOW AREA Event to WindowManager
+  Area is Logical area
+
+*/
+BOOL kUpdateScreenByWindowArea(QWORD qwWindowID, const RECT* pstArea)
+{
+  EVENT stEvent;
+  WINDOW* pstWindow;
+
+  pstWindow = kGetWindow(qwWindowID);
+  if ((pstWindow == NULL) &&
+    ((pstWindow->dwFlags & WINDOW_FLAGS_SHOW) == 0))
+  {
+    return FALSE;
+  }
+
+  stEvent.qwType = EVENT_WINDOWMANAGER_UPDATESCREENBYWINDOWAREA;
+  stEvent.stWindowEvent.qwWindowID = qwWindowID;
+  kMemCpy(&(stEvent.stWindowEvent.stArea), pstArea, sizeof(RECT));
+
+  return kSendEventToWindowManager(&stEvent);
+}
+
+/*
+  Send UPDATE SCREEN WINDOW AREA Event to WindowManager
+  Area is Physical area
+*/
+BOOL kUpdateScreenByScreenArea(const RECT* pstArea)
+{
+  EVENT stEvent;
+
+  stEvent.qwType = EVENT_WINDOWMANAGER_UPDATESCREENBYSCREENAREA;
+  stEvent.stWindowEvent.qwWindowID = WINDOW_INVALIDID;
+  kMemCpy(&(stEvent.stWindowEvent.stArea), pstArea, sizeof(RECT));
+
+  return kSendEventToWindowManager(&stEvent);
+}
+
+/*
+  Get Top Window ID that the point be in 
+*/
+QWORD kFindWindowByPoint(int iX, int iY)
+{
+  QWORD qwWindowID;
+  WINDOW* pstWindow;
+
+  qwWindowID = gs_stWindowManager.qwBackgroundWindowID;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stWindowManager.stLock));
+
+  // Find From Window List
+  pstWindow = kGetHeaderFromList(&(gs_stWindowManager.stWindowList));
+  do
+  {
+    pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList), pstWindow);
+
+    if ((pstWindow != NULL) &&
+      (pstWindow->dwFlags & WINDOW_FLAGS_SHOW) &&
+      (kIsInRectangle(&(pstWindow->stArea), iX, iY) == TRUE))
+    {
+      qwWindowID = pstWindow->stLink.qwID;
+    }
+  } while (pstWindow != NULL);
+
+  kUnlock(&(gs_stWindowManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return qwWindowID;
+}
+
+/*
+  Get Window Id using Window Title
+*/
+QWORD kFindWindowByTitle(const char* pcTitle)
+{
+  QWORD qwWindowID;
+  WINDOW* pstWindow;
+  int iTitleLength;
+
+  qwWindowID = WINDOW_INVALIDID;
+  iTitleLength = kStrLen(pcTitle);
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stWindowManager.stLock));
+
+  // Find From Window List
+  pstWindow = kGetHeaderFromList(&(gs_stWindowManager.stWindowList));
+  while (pstWindow != NULL)
+  {
+    // Compare title 
+    if ((kStrLen(pstWindow->vcWindowTitle) == iTitleLength) &&
+      (kMemCmp(pstWindow->vcWindowTitle, pcTitle, iTitleLength) == 0))
+    {
+      qwWindowID = pstWindow->stLink.qwID;
+      break;
+    }
+
+    pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList),
+      pstWindow);
+  }
+
+  kUnlock(&(gs_stWindowManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return qwWindowID;
+}
+
+/*
+  Get Top Window ID
+*/
+QWORD kGetTopWindowID(void)
+{
+  WINDOW* pstActiveWindow;
+  QWORD qwActiveWindowID;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stWindowManager.stLock));
+
+  // Get Window List tail 
+  pstActiveWindow = (WINDOW*)kGetTailFromList(&(gs_stWindowManager.stWindowList));
+  if (pstActiveWindow != NULL)
+  {
+    qwActiveWindowID = pstActiveWindow->stLink.qwID;
+  }
+  else
+  {
+    qwActiveWindowID = WINDOW_INVALIDID;
+  }
+
+  kUnlock(&(gs_stWindowManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return qwActiveWindowID;
+}
+
+/*
+  Move window To Top and send WINDOW_SELECT Event
+  and send WINDOW_DESELECT to Previous top window 
+*/
+BOOL kMoveWindowToTop(QWORD qwWindowID)
+{
+  WINDOW* pstWindow;
+  RECT stArea;
+  DWORD dwFlags;
+  QWORD qwTopWindowID;
+  EVENT stEvent;
+
+  qwTopWindowID = kGetTopWindowID();
+
+  // if already Top
+  if (qwTopWindowID == qwWindowID) {
+    return TRUE;
+  }
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stWindowManager.stLock));
+
+  // Remove And Move to Tail
+  pstWindow = kRemoveList(&(gs_stWindowManager.stWindowList), qwWindowID);
+  if (pstWindow != NULL)
+  {
+    kAddListToTail(&(gs_stWindowManager.stWindowList), pstWindow);
+
+    // Store Area and flags for Redraw
+    kConvertRectScreenToClient(qwWindowID, &(pstWindow->stArea), &stArea);
+    dwFlags = pstWindow->dwFlags;
+  }
+
+  kUnlock(&(gs_stWindowManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  if (pstWindow != NULL) {
+
+    // Send Window Select Event
+    kSetWindowEvent(qwWindowID, EVENT_WINDOW_SELECT, &stEvent);
+    kSendEventToWindow(qwWindowID, &stEvent);
+
+    // if window has title, update title area
+    if (dwFlags & WINDOW_FLAGS_DRAWTITLE)
+    {
+      kUpdateWindowTitle(qwWindowID, TRUE);
+      stArea.iY1 += WINDOW_TITLEBAR_HEIGHT;
+      kUpdateScreenByWindowArea(qwWindowID, &stArea);
+    }
+    else
+    {
+      kUpdateScreenByID(qwWindowID);
+    }
+
+    // Send Window Deselect Event to previous Top window
+    kSetWindowEvent(qwTopWindowID, EVENT_WINDOW_DESELECT, &stEvent);
+    kSendEventToWindow(qwTopWindowID, &stEvent);
+    kUpdateWindowTitle(qwTopWindowID, FALSE);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/*
+  Move Window and Send WINDOW_MOVE Evnet
+*/
+BOOL kMoveWindow(QWORD qwWindowID, int iX, int iY)
+{
+  WINDOW* pstWindow;
+  RECT stPreviousArea;
+  int iWidth;
+  int iHeight;
+  EVENT stEvent;
+
+  // Find window
+  // --- CRITCAL SECTION BEGIN ---
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow == NULL)
+  {
+    return FALSE;
+  }
+
+  // Store Previous Area
+  kMemCpy(&stPreviousArea, &(pstWindow->stArea), sizeof(RECT));
+
+  // Move Window
+  iWidth = kGetRectangleWidth(&stPreviousArea);
+  iHeight = kGetRectangleHeight(&stPreviousArea);
+  kSetRectangleData(iX, iY, iX + iWidth - 1, iY + iHeight - 1,
+    &(pstWindow->stArea));
+
+  kUnlock(&(pstWindow->stLock));
+  // --- CRITCAL SECTION END ---
+
+  // Update Previous Area
+  kUpdateScreenByScreenArea(&stPreviousArea);
+
+  // Update Current Area
+  kUpdateScreenByID(qwWindowID);
+
+  // Send WINDOW MOVE Event
+  kSetWindowEvent(qwWindowID, EVENT_WINDOW_MOVE, &stEvent);
+  kSendEventToWindow(qwWindowID, &stEvent);
+
+  return TRUE;
+}
+
+/*
+  Check that a point is on Title Bar
+*/
+BOOL kIsInTitleBar(QWORD qwWindowID, int iX, int iY)
+{
+  WINDOW* pstWindow;
+
+  pstWindow = kGetWindow(qwWindowID);
+
+  if ((pstWindow == NULL) ||
+    ((pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) == 0))
+  {
+    return FALSE;
+  }
+
+  // Check
+  if ((pstWindow->stArea.iX1 <= iX) && (iX <= pstWindow->stArea.iX2) &&
+    (pstWindow->stArea.iY1 <= iY) &&
+    (iY <= pstWindow->stArea.iY1 + WINDOW_TITLEBAR_HEIGHT))
+  {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/*
+  Check that a point is on Close button
+*/
+BOOL kIsInCloseButton(QWORD qwWindowID, int iX, int iY)
+{
+  WINDOW* pstWindow;
+
+  pstWindow = kGetWindow(qwWindowID);
+  if ((pstWindow == NULL) &&
+    ((pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) == 0))
+  {
+    return FALSE;
+  }
+
+  // Check
+  if (((pstWindow->stArea.iX2 - WINDOW_XBUTTON_SIZE - 1) <= iX) &&
+    (iX <= (pstWindow->stArea.iX2 - 1)) &&
+    ((pstWindow->stArea.iY1 + 1) <= iY) &&
+    (iY <= (pstWindow->stArea.iY1 + 1 + WINDOW_XBUTTON_SIZE)))
+  {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/*
+  Update Window Title Area
+*/
+static BOOL kUpdateWindowTitle(QWORD qwWindowID, BOOL bSelectedTitle)
+{
+  WINDOW* pstWindow;
+  RECT stTitleBarArea;
+
+  // Find Window
+  pstWindow = kGetWindow(qwWindowID);
+
+  if ((pstWindow != NULL) &&
+    (pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE))
+  {
+    kDrawWindowTitle(pstWindow->stLink.qwID, pstWindow->vcWindowTitle,
+      bSelectedTitle);
+
+    stTitleBarArea.iX1 = 0;
+    stTitleBarArea.iY1 = 0;
+    stTitleBarArea.iX2 = kGetRectangleWidth(&(pstWindow->stArea)) - 1;
+    stTitleBarArea.iY2 = WINDOW_TITLEBAR_HEIGHT;
+
+    kUpdateScreenByWindowArea(qwWindowID, &stTitleBarArea);
+
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+
+/*
+  Get Window Area (Physical)
+*/
+BOOL kGetWindowArea(QWORD qwWindowID, RECT* pstArea)
+{
+  WINDOW* pstWindow;
+
+  // Find window
+  // --- CRITCAL SECTION BEGIN ---
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow == NULL)
+  {
+    return FALSE;
+  }
+
+  kMemCpy(pstArea, &(pstWindow->stArea), sizeof(RECT));
+
+  kUnlock(&(pstWindow->stLock));
+  // --- CRITCAL SECTION END ---
+  return TRUE;
+}
+
+/*
+  Convert Area Physical(Screen) to Logical(Window)
+*/
+BOOL kConvertPointScreenToClient(QWORD qwWindowID, const POINT* pstXY,
+  POINT* pstXYInWindow)
+{
+  RECT stArea;
+
+  if (kGetWindowArea(qwWindowID, &stArea) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstXYInWindow->iX = pstXY->iX - stArea.iX1;
+  pstXYInWindow->iY = pstXY->iY - stArea.iY1;
+  return TRUE;
+}
+
+/*
+  Convert Area Logical(Window) to Physical(Screen)
+*/
+BOOL kConvertPointClientToScreen(QWORD qwWindowID, const POINT* pstXY,
+  POINT* pstXYInScreen)
+{
+  RECT stArea;
+
+  if (kGetWindowArea(qwWindowID, &stArea) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstXYInScreen->iX = pstXY->iX + stArea.iX1;
+  pstXYInScreen->iY = pstXY->iY + stArea.iY1;
+  return TRUE;
+}
+
+/*
+  Convert Rect Area Physical(Screen) to Logical(Window)
+*/
+BOOL kConvertRectScreenToClient(QWORD qwWindowID, const RECT* pstArea,
+  RECT* pstAreaInWindow)
+{
+  RECT stWindowArea;
+
+  if (kGetWindowArea(qwWindowID, &stWindowArea) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstAreaInWindow->iX1 = pstArea->iX1 - stWindowArea.iX1;
+  pstAreaInWindow->iY1 = pstArea->iY1 - stWindowArea.iY1;
+  pstAreaInWindow->iX2 = pstArea->iX2 - stWindowArea.iX1;
+  pstAreaInWindow->iY2 = pstArea->iY2 - stWindowArea.iY1;
+  return TRUE;
+}
+
+/*
+  Convert Rect Area Logical(Window) to Physical(Screen)
+*/
+BOOL kConvertRectClientToScreen(QWORD qwWindowID, const RECT* pstArea,
+  RECT* pstAreaInScreen)
+{
+  RECT stWindowArea;
+
+  if (kGetWindowArea(qwWindowID, &stWindowArea) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstAreaInScreen->iX1 = pstArea->iX1 + stWindowArea.iX1;
+  pstAreaInScreen->iY1 = pstArea->iY1 + stWindowArea.iY1;
+  pstAreaInScreen->iX2 = pstArea->iX2 + stWindowArea.iX1;
+  pstAreaInScreen->iY2 = pstArea->iY2 + stWindowArea.iY1;
   return TRUE;
 }
