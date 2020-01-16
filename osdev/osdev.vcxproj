@@ -112,6 +112,7 @@
     <ClCompile Include="02.Kernel64\Source\List.c" />
     <ClCompile Include="02.Kernel64\Source\LocalAPIC.c" />
     <ClCompile Include="02.Kernel64\Source\Main.c" />
+    <ClCompile Include="02.Kernel64\Source\Mouse.c" />
     <ClCompile Include="02.Kernel64\Source\MPConfigurationTable.c" />
     <ClCompile Include="02.Kernel64\Source\MultiProcessor.c" />
     <ClCompile Include="02.Kernel64\Source\PIC.c" />
@@ -162,6 +163,7 @@
     <ClInclude Include="02.Kernel64\Source\Keyboard.h" />
     <ClInclude Include="02.Kernel64\Source\List.h" />
     <ClInclude Include="02.Kernel64\Source\LocalAPIC.h" />
+    <ClInclude Include="02.Kernel64\Source\Mouse.h" />
     <ClInclude Include="02.Kernel64\Source\MPConfigurationTable.h" />
     <ClInclude Include="02.Kernel64\Source\MultiProcessor.h" />
     <ClInclude Include="02.Kernel64\Source\PIC.h" />

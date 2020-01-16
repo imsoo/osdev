@@ -2,6 +2,7 @@
 #include "AssemblyUtility.h"
 #include "Keyboard.h"
 #include "Queue.h"
+#include "Mouse.h"
 
 /*
   About Control Keyboard
@@ -39,6 +40,7 @@ BOOL kWaitForAckAndPutOtherScanCode(void)
   int i, j;
   BYTE bData;
   BOOL bResult = FALSE;
+  BOOL bMouseData;
 
   for (j = 0; j < 100; j++) {
     for (i = 0; i < 0xFFFF; i++) {
@@ -46,6 +48,15 @@ BOOL kWaitForAckAndPutOtherScanCode(void)
         break;
       }
     }
+
+    // Check Mouse Data OR KeyBoard Data
+    if (kIsMouseDataInOutputBuffer() == TRUE) {
+      bMouseData = TRUE;
+    }
+    else {
+      bMouseData = FALSE;
+    }
+
     // READ
     bData = kInPortByte(0x60);
     // ACK
@@ -53,9 +64,14 @@ BOOL kWaitForAckAndPutOtherScanCode(void)
       bResult = TRUE;
       break;
     }
-    // OTHER
+    // OTHER (Mouse OR KeyBorad Data)
     else {
-      kConvertScanCodeAndPutQueue(bData);
+      if (bMouseData == FALSE) {
+        kConvertScanCodeAndPutQueue(bData);
+      }
+      else {
+        kAccumulatedMouseDataAndPutQueue(bData);
+      }
     }
   }
   return bResult;

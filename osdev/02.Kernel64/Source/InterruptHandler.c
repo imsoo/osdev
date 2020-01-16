@@ -1,6 +1,7 @@
 #include "InterruptHandler.h"
 #include "PIC.h"
 #include "Keyboard.h"
+#include "Mouse.h"
 #include "Console.h"
 #include "Utility.h"
 #include "Task.h"
@@ -181,8 +182,14 @@ void kKeyboardHandler(int iVectorNumber)
   kPrintStringXY(0, 0, vcBuffer);
 
   if (kIsOutputBufferFull() == TRUE) {
-    bTemp = kGetKeyboardScanCode();
-    kConvertScanCodeAndPutQueue(bTemp);
+    if (kIsMouseDataInOutputBuffer() == FALSE) {
+      bTemp = kGetKeyboardScanCode();
+      kConvertScanCodeAndPutQueue(bTemp);
+    }
+    else {
+      bTemp = kGetKeyboardScanCode();
+      kAccumulatedMouseDataAndPutQueue(bTemp);
+    }
   }
 
   iIRQ = iVectorNumber - PIC_IRQSTARTVECTOR;
@@ -196,6 +203,47 @@ void kKeyboardHandler(int iVectorNumber)
   // Interrupt Load Balancing
   kProcessLoadBalancing(iIRQ);
 }
+
+/*
+  Mouse Interrupt Handler
+*/
+void kMouseHandler(int iVectorNumber)
+{
+  char vcBuffer[] = "[INT:  , ]";
+  static int g_iMouseInterruptCount = 0;
+  BYTE bTemp;
+  int iIRQ;
+
+  vcBuffer[5] = '0' + iVectorNumber / 10;
+  vcBuffer[6] = '0' + iVectorNumber % 10;
+
+  vcBuffer[8] = '0' + g_iMouseInterruptCount;
+  g_iMouseInterruptCount = (g_iMouseInterruptCount + 1) % 10;
+  kPrintStringXY(0, 0, vcBuffer);
+
+  if (kIsOutputBufferFull() == TRUE) {
+    if (kIsMouseDataInOutputBuffer() == FALSE) {
+      bTemp = kGetKeyboardScanCode();
+      kConvertScanCodeAndPutQueue(bTemp);
+    }
+    else {
+      bTemp = kGetKeyboardScanCode();
+      kAccumulatedMouseDataAndPutQueue(bTemp);
+    }
+  }
+
+  iIRQ = iVectorNumber - PIC_IRQSTARTVECTOR;
+
+  // Send EOI
+  kSendEOI(iIRQ);
+
+  // Update Interrupt Count
+  kIncreaseInterruptCount(iIRQ);
+
+  // Interrupt Load Balancing
+  kProcessLoadBalancing(iIRQ);
+}
+
 
 /*
   Timer Handler
