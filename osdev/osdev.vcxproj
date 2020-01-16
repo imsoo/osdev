@@ -125,6 +125,8 @@
     <ClCompile Include="02.Kernel64\Source\Task.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="02.Kernel64\Source\VBE.c" />
+    <ClCompile Include="02.Kernel64\Source\Window.c" />
+    <ClCompile Include="02.Kernel64\Source\WindowManagerTask.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
     <ClCompile Include="04.Utility\01.SerialTransfer\NetworkTransfer.c" />
     <ClCompile Include="Makefile" />
@@ -177,6 +179,8 @@
     <ClInclude Include="02.Kernel64\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />
     <ClInclude Include="02.Kernel64\Source\VBE.h" />
+    <ClInclude Include="02.Kernel64\Source\Window.h" />
+    <ClInclude Include="02.Kernel64\Source\WindowManagerTask.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
