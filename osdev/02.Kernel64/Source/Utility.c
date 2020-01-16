@@ -1,5 +1,6 @@
 #include "Utility.h"
 #include "AssemblyUtility.h"
+#include "VBE.h"
 
 // PIT Count
 volatile QWORD g_qwTickCount = 0;
@@ -540,4 +541,15 @@ int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap)
   // set NULL terminate and return result string
   pcBuffer[iBufferIndex] = '\0';
   return iBufferIndex;
+}
+
+/*
+  Check GUI Flag (BootLoader Memory Area : 0x7C0A)
+*/
+BOOL kIsGraphicMode(void)
+{
+  if (*(BYTE*)VBE_STARTGRAPHICMODEFLAGADDRESS == 0) {
+    return FALSE;
+  }
+  return TRUE;
 }

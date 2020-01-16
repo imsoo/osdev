@@ -4,6 +4,7 @@
 #include "VBE.h"
 #include "Mouse.h"
 #include "Task.h"
+#include "GUITask.h"
 
 /*
   Window Manager Task
@@ -106,9 +107,6 @@ BOOL kProcessMouseData(void)
           kSetWindowEvent(qwWindowIDUnderMouse, EVENT_WINDOW_CLOSE,
             &stEvent);
           kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
-
-          // Temp 
-          kDeleteWindow(qwWindowIDUnderMouse);
         }
         // Move
         else
@@ -147,13 +145,7 @@ BOOL kProcessMouseData(void)
       kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
 
       // Temp
-      kSPrintf(vcTempTitle, "Window %d", iWindowCount++);
-      qwWindowID = kCreateWindow(iMouseX - 10, iMouseY - WINDOW_TITLEBAR_HEIGHT / 2,
-        400, 200, WINDOW_FLAGS_DRAWFRAME | WINDOW_FLAGS_DRAWTITLE, vcTempTitle);
-
-      kDrawText(qwWindowID, 10, WINDOW_TITLEBAR_HEIGHT + 10, WINDOW_COLOR_FRAMETEXT,
-        WINDOW_COLOR_BACKGROUND, "Hello, World", 13);
-      kShowWindow(qwWindowID, TRUE);
+      kCreateTask(TASK_FLAGS_LOW | TASK_FLAGS_THREAD, NULL, NULL, (QWORD)kHelloWorldGUITask, TASK_LOADBALANCINGID);
     }
     // R Button Up
     else {

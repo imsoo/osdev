@@ -105,6 +105,7 @@
     <ClCompile Include="02.Kernel64\Source\DynamicMemory.c" />
     <ClCompile Include="02.Kernel64\Source\EnglishFont.c" />
     <ClCompile Include="02.Kernel64\Source\FileSystem.c" />
+    <ClCompile Include="02.Kernel64\Source\GUITask.c" />
     <ClCompile Include="02.Kernel64\Source\HardDisk.c" />
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\IOAPIC.c" />
@@ -158,6 +159,7 @@
     <ClInclude Include="02.Kernel64\Source\DynamicMemory.h" />
     <ClInclude Include="02.Kernel64\Source\FileSystem.h" />
     <ClInclude Include="02.Kernel64\Source\Font.h" />
+    <ClInclude Include="02.Kernel64\Source\GUITask.h" />
     <ClInclude Include="02.Kernel64\Source\HardDisk.h" />
     <ClInclude Include="02.Kernel64\Source\InterruptHandler.h" />
     <ClInclude Include="02.Kernel64\Source\IOAPIC.h" />
