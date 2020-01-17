@@ -63,7 +63,7 @@ void kAddListToHeader(LIST* pstList, void* pvItem)
     return;
   }
 
-  pstList->pvHeader = pstLink;
+  pstList->pvHeader = pvItem;
   pstList->iItemCount++;
 }
 

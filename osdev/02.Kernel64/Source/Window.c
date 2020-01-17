@@ -172,6 +172,11 @@ void kInitializeGUISystem(void)
     while (1);
   }
 
+  // Init Mouse Info
+  gs_stWindowManager.bPreviousButtonStatus = 0;
+  gs_stWindowManager.bWindowMoveMode = FALSE;
+  gs_stWindowManager.qwMovingWindowID = WINDOW_INVALIDID;
+
   // Create Background Window
   qwBackgroundWindowID = kCreateWindow(0, 0, pstModeInfo->wXResolution, pstModeInfo->wYResolution,
     0, WINDOW_BACKGROUNDWINDOWTITLE);

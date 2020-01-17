@@ -223,7 +223,7 @@ void kInternalDrawCircle(const RECT* pstMemoryArea, COLOR* pstMemoryAddress, int
 /*
   Draw Text
 */
-void kInternalDrawText(const RECT* pstMemoryArea, COLOR* pstMemoryAddress, int iX, int iY, COLOR stTextColor, 
+void kInternalDrawText(const RECT* pstMemoryArea, COLOR* pstMemoryAddress, int iX, int iY, COLOR stTextColor,
   COLOR stBackgroundColor, const char* pcString, int iLength)
 {
   int iCurrentX, iCurrentY;
@@ -240,7 +240,7 @@ void kInternalDrawText(const RECT* pstMemoryArea, COLOR* pstMemoryAddress, int i
   int iOverlappedHeight;
 
   iCurrentX = iX;
-  
+
   iMemoryAreaWidth = kGetRectangleWidth(pstMemoryArea);
 
   // Print String
@@ -299,7 +299,7 @@ void kInternalDrawText(const RECT* pstMemoryArea, COLOR* pstMemoryAddress, int i
 BOOL kIsInRectangle(const RECT* pstArea, int iX, int iY)
 {
   if ((iX < pstArea->iX1) || (pstArea->iX2 < iX) ||
-    (iY < pstArea->iY1) || (pstArea->iY2 < iY)) {
+      (iY < pstArea->iY1) || (pstArea->iY2 < iY)) {
     return FALSE;
   }
   return TRUE;
@@ -328,7 +328,7 @@ int kGetRectangleHeight(const RECT* pstArea)
   int iHeight;
 
   iHeight = pstArea->iY2 - pstArea->iY1 + 1;
-  
+
   if (iHeight < 0)
     return -iHeight;
 
@@ -365,7 +365,7 @@ void kSetRectangleData(int iX1, int iY1, int iX2, int iY2, RECT* pstRect)
 BOOL kIsRectangleOverlapped(const RECT* pstArea1, const RECT* pstArea2)
 {
   if ((pstArea1->iX1 > pstArea2->iX2) || (pstArea1->iX2 < pstArea2->iX1) ||
-    (pstArea1->iY1 > pstArea2->iY2) || (pstArea1->iY2 < pstArea2->iY1)) {
+      (pstArea1->iY1 > pstArea2->iY2) || (pstArea1->iY2 < pstArea2->iY1)) {
     return FALSE;
   }
   return TRUE;
@@ -397,4 +397,6 @@ BOOL kGetOverlappedRectangle(const RECT* pstArea1, const RECT* pstArea2, RECT* p
   pstIntersection->iY1 = iMaxY1;
   pstIntersection->iX2 = iMinX2;
   pstIntersection->iY2 = iMinY2;
+
+  return TRUE;
 }
