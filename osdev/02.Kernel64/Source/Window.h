@@ -85,6 +85,8 @@
 #define EVENT_WINDOWMANAGER_UPDATESCREENBYWINDOWAREA    16
 #define EVENT_WINDOWMANAGER_UPDATESCREENBYSCREENAREA    17
 
+#define WINDOW_OVERLAPPEDAREALOGMAXCOUNT                20
+
 // Event
 typedef struct kMouseEventStruct
 {
@@ -209,7 +211,19 @@ typedef struct kWindowManagerStruct
   QWORD qwMovingWindowID;
   BOOL bWindowMoveMode;
 
+  // Bitmap for Screen Drawing
+  BYTE* pbDrawBitmap;
+
 } WINDOWMANAGER;
+
+typedef struct kDrawBitmapStruct
+{
+  // Update Area Info
+  RECT stArea;
+
+  // Bitmap 
+  BYTE* pbBitmap
+} DRAWBITMAP;
 
 // Window Pool
 static void kInitializeWindowPool(void);
@@ -219,6 +233,7 @@ static void kFreeWindow(QWORD qwID);
 // Window Manager
 void kInitializeGUISystem(void);
 WINDOWMANAGER* kGetWindowManager(void);
+QWORD kGetBackgroundWindowID(void);
 
 // Window
 QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
@@ -228,8 +243,8 @@ BOOL kDeleteAllWindowInTaskID(QWORD qwTaskID);
 WINDOW* kGetWindow(QWORD qwWindowID);
 WINDOW* kGetWindowWithWindowLock(QWORD qwWindowID);
 BOOL kShowWindow(QWORD qwWindowID, BOOL bShow);
-BOOL kRedrawWindowByArea(const RECT* pstArea);
-static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, const RECT* pstCopyArea);
+BOOL kRedrawWindowByArea(const RECT* pstArea, QWORD qwDrawWindowID);
+static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, DRAWBITMAP* pstDrawBitmap);
 
 QWORD kFindWindowByPoint(int iX, int iY);
 QWORD kFindWindowByTitle(const char* pcTitle);
@@ -286,6 +301,13 @@ BOOL kDrawCircle(QWORD qwWindowID, int iX, int iY, int iRadius, COLOR stColor,
   BOOL bFill);
 BOOL kDrawText(QWORD qwWindowID, int iX, int iY, COLOR stTextColor,
   COLOR stBackgroundColor, const char* pcString, int iLength);
+
+// Draw Bitmap
+BOOL kCreateDrawBitmap(const RECT* pstArea, DRAWBITMAP* pstDrawBitmap);
+inline BOOL kGetStartPositionInDrawBitmap(const DRAWBITMAP* pstDrawBitmap,
+  int iX, int iY, int* piByteOffset, int* piBitOffset);
+static BOOL kFillDrawBitmap(DRAWBITMAP* pstDrawBitmap, RECT* pstArea, BOOL bFill);
+inline BOOL kIsDrawBitmapAllOff(const DRAWBITMAP* pstDrawBitmap);
 
 
 #endif // !__WINDOW_H__

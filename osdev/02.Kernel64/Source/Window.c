@@ -4,6 +4,7 @@
 #include "VBE.h"
 #include "Console.h"
 #include "Font.h"
+#include "Utility.h"
 
 static WINDOWPOOLMANAGER gs_stWindowPoolManager;
 static WINDOWMANAGER gs_stWindowManager;
@@ -112,7 +113,7 @@ static WINDOW* kAllocateWindow(void)
 static void kFreeWindow(QWORD qwID)
 {
   int i;
-  
+
   i = GETWINDOWOFFSET(qwID);
 
   // --- CRITCAL SECTION BEGIN ---
@@ -164,6 +165,13 @@ void kInitializeGUISystem(void)
   }
   kInitializeQueue(&(gs_stWindowManager.stEventQueue), pstEventBuffer, EVENTQUEUE_WNIDOWMANAGERMAXCOUNT, sizeof(EVENT));
 
+  // Init Draw bitmap
+  gs_stWindowManager.pbDrawBitmap = kAllocateMemory((pstModeInfo->wXResolution * pstModeInfo->wYResolution + 7) / 8);
+  if (gs_stWindowManager.pbDrawBitmap == NULL) {
+    kPrintf("Window Manager Draw Bitmap Allocate Fail\n");
+    while (1);
+  }
+
   // Create Background Window
   qwBackgroundWindowID = kCreateWindow(0, 0, pstModeInfo->wXResolution, pstModeInfo->wYResolution,
     0, WINDOW_BACKGROUNDWINDOWTITLE);
@@ -181,6 +189,14 @@ void kInitializeGUISystem(void)
 WINDOWMANAGER* kGetWindowManager(void)
 {
   return &gs_stWindowManager;
+}
+
+/*
+  Get Backgroud Window ID
+*/
+QWORD kGetBackgroundWindowID(void)
+{
+  return gs_stWindowManager.qwBackgroundWindowID;
 }
 
 /*
@@ -264,7 +280,7 @@ QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
   qwActiveWindowID = kGetTopWindowID();
 
   // Add Window List 
-  kAddListToTail(&gs_stWindowManager.stWindowList, pstWindow);
+  kAddListToHeader(&gs_stWindowManager.stWindowList, pstWindow);
 
   kUnlock(&(gs_stWindowManager.stLock));
   // --- CRITCAL SECTION END ---
@@ -498,37 +514,112 @@ BOOL kShowWindow(QWORD qwWindowID, BOOL bShow)
 }
 
 /*
-  Redraw Area
+  Redraw Area for WindowManager
 */
-BOOL kRedrawWindowByArea(const RECT* pstArea)
+BOOL kRedrawWindowByArea(const RECT* pstArea, QWORD qwDrawWindowID)
 {
   WINDOW* pstWindow;
   WINDOW* pstTargetWindow = NULL;
   RECT stOverlappedArea;
   RECT stCursorArea;
+  DRAWBITMAP stDrawBitmap;
+  RECT stTempOverlappedArea;
+  RECT vstLargestOverlappedArea[WINDOW_OVERLAPPEDAREALOGMAXCOUNT];
+  int viLargestOverlappedAreaSize[WINDOW_OVERLAPPEDAREALOGMAXCOUNT];
+  int iTempOverlappedAreaSize;
+  int iMinAreaSize;
+  int iMinAreaIndex;
+  int i;
 
   // Not in screen
   if (kGetOverlappedRectangle(&(gs_stWindowManager.stScreenArea), pstArea, &stOverlappedArea) == FALSE) {
     return FALSE;
   }
 
+  // Init History
+  kMemSet(viLargestOverlappedAreaSize, 0, sizeof(viLargestOverlappedAreaSize));
+  kMemSet(vstLargestOverlappedArea, 0, sizeof(vstLargestOverlappedArea));
+
   // --- CRITCAL SECTION BEGIN ---
   kLock(&(gs_stWindowManager.stLock));
 
+  // Create Draw Bitmap
+  kCreateDrawBitmap(&stOverlappedArea, &stDrawBitmap);
 
   // Redraw pstArea from Header
   pstWindow = kGetHeaderFromList(&(gs_stWindowManager.stWindowList));
   while (pstWindow != NULL) {
     if ((pstWindow->dwFlags & WINDOW_FLAGS_SHOW) &&
-      (kIsRectangleOverlapped(&(pstWindow->stArea), &stOverlappedArea)) == TRUE) {
+      (kGetOverlappedRectangle(&(pstWindow->stArea), &stOverlappedArea,
+        &stTempOverlappedArea) == TRUE)) {
+
+      // Check History
+      iTempOverlappedAreaSize = kGetRectangleWidth(&stTempOverlappedArea) *
+        kGetRectangleHeight(&stTempOverlappedArea);
+
+      for (i = 0; i < WINDOW_OVERLAPPEDAREALOGMAXCOUNT; i++)
+      {
+        if ((iTempOverlappedAreaSize <= viLargestOverlappedAreaSize[i]) &&
+          (kIsInRectangle(&(vstLargestOverlappedArea[i]),
+            stTempOverlappedArea.iX1, stTempOverlappedArea.iY1) == TRUE) &&
+            (kIsInRectangle(&(vstLargestOverlappedArea[i]),
+              stTempOverlappedArea.iX2, stTempOverlappedArea.iY2) == TRUE))
+        {
+          break;
+        }
+      }
+
+      // If Previous Update Area contain currnet Area, move next window
+      if (i < WINDOW_OVERLAPPEDAREALOGMAXCOUNT)
+      {
+        pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList),
+          pstWindow);
+        continue;
+      }
+
+      // find Min Area and Compare
+      iMinAreaSize = 0xFFFFFF;
+      iMinAreaIndex = 0;
+      for (i = 0; i < WINDOW_OVERLAPPEDAREALOGMAXCOUNT; i++)
+      {
+        if (viLargestOverlappedAreaSize[i] < iMinAreaSize)
+        {
+          iMinAreaSize = viLargestOverlappedAreaSize[i];
+          iMinAreaIndex = i;
+        }
+      }
+      // Update History
+      if (iMinAreaSize < iTempOverlappedAreaSize)
+      {
+        kMemCpy(&(vstLargestOverlappedArea[iMinAreaIndex]),
+          &stTempOverlappedArea, sizeof(RECT));
+        viLargestOverlappedAreaSize[iMinAreaIndex] = iTempOverlappedAreaSize;
+      }
 
       // --- CRITCAL SECTION BEGIN ---
       kLock(&(pstWindow->stLock));
 
-      kCopyWindowBufferToFrameBuffer(pstWindow, &stOverlappedArea);
+      // if Specific Window ID (qwDrawWindowID) is set
+      if ((qwDrawWindowID != WINDOW_INVALIDID) &&
+        (qwDrawWindowID != pstWindow->stLink.qwID))
+      {
+        // Bitmap Update
+        kFillDrawBitmap(&stDrawBitmap, &(pstWindow->stArea), FALSE);
+      }
+      else
+      {
+        // Copy Window Buffer to VideoMemory
+        kCopyWindowBufferToFrameBuffer(pstWindow, &stDrawBitmap);
+      }
 
       kUnlock(&(pstWindow->stLock));
       // --- CRITCAL SECTION END ---
+    }
+
+    // Draw Bitmap is Clear
+    if (kIsDrawBitmapAllOff(&stDrawBitmap) == TRUE)
+    {
+      break;
     }
 
     pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList), pstWindow);
@@ -550,7 +641,7 @@ BOOL kRedrawWindowByArea(const RECT* pstArea)
 /*
   Copy Area Data from WindowBuffer to Video Memory
 */
-static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, const RECT* pstCopyArea)
+static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, DRAWBITMAP* pstDrawBitmap)
 {
   RECT stTempArea;
   RECT stOverlappedArea;
@@ -561,8 +652,15 @@ static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, const RECT* 
   int i;
   COLOR* pstCurrentVideoMemoryAddress;
   COLOR* pstCurrentWindowBufferAddress;
+  BYTE bTempBitmap;
+  int iByteOffset;
+  int iBitOffset;
+  int iOffsetX;
+  int iOffsetY;
+  int iLastBitOffset;
+  int iBulkCount;
 
-  if (kGetOverlappedRectangle(&(gs_stWindowManager.stScreenArea), pstCopyArea, &stTempArea) == FALSE) {
+  if (kGetOverlappedRectangle(&(gs_stWindowManager.stScreenArea), &(pstDrawBitmap->stArea), &stTempArea) == FALSE) {
     return;
   }
 
@@ -575,21 +673,102 @@ static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, const RECT* 
   iOverlappedWidth = kGetRectangleWidth(&stOverlappedArea);
   iOverlappedHeight = kGetRectangleHeight(&stOverlappedArea);
 
-  // Calc Memory address
-  pstCurrentVideoMemoryAddress = gs_stWindowManager.pstVideoMemory +
-    stOverlappedArea.iY1 * iScreenWidth + stOverlappedArea.iX1;
+  for (iOffsetY = 0; iOffsetY < iOverlappedHeight; iOffsetY++)
+  {
+    if (kGetStartPositionInDrawBitmap(pstDrawBitmap, stOverlappedArea.iX1,
+      stOverlappedArea.iY1 + iOffsetY, &iByteOffset, &iBitOffset) == FALSE)
+    {
+      break;
+    }
 
-  pstCurrentWindowBufferAddress = pstWindow->pstWindowBuffer +
-    (stOverlappedArea.iY1 - pstWindow->stArea.iY1) * iWindowWidth +
-    (stOverlappedArea.iX1 - pstWindow->stArea.iX1);
+    // Calc Memory Address
+    pstCurrentVideoMemoryAddress = gs_stWindowManager.pstVideoMemory +
+      (stOverlappedArea.iY1 + iOffsetY)* iScreenWidth + stOverlappedArea.iX1;
+    pstCurrentWindowBufferAddress = pstWindow->pstWindowBuffer +
+      (stOverlappedArea.iY1 - pstWindow->stArea.iY1 + iOffsetY) * iWindowWidth +
+      (stOverlappedArea.iX1 - pstWindow->stArea.iX1);
 
-  // Copy 
-  for (i = 0; i < iOverlappedHeight; i++) {
-    kMemCpy(pstCurrentVideoMemoryAddress, pstCurrentWindowBufferAddress,
-      iOverlappedWidth * sizeof(COLOR));
 
-    pstCurrentVideoMemoryAddress += iScreenWidth;
-    pstCurrentWindowBufferAddress += iWindowWidth;
+    for (iOffsetX = 0; iOffsetX < iOverlappedWidth; )
+    {
+      // 0xFF
+      if ((pstDrawBitmap->pbBitmap[iByteOffset] == 0xFF) &&
+        (iBitOffset == 0x00) &&
+        ((iOverlappedWidth - iOffsetX) >= 8))
+      {
+        for (iBulkCount = 0;
+          (iBulkCount < ((iOverlappedWidth - iOffsetX) >> 3));
+          iBulkCount++)
+        {
+          if (pstDrawBitmap->pbBitmap[iByteOffset + iBulkCount] != 0xFF)
+          {
+            break;
+          }
+        }
+
+        kMemCpy(pstCurrentVideoMemoryAddress, pstCurrentWindowBufferAddress,
+          (sizeof(COLOR) * iBulkCount) << 3);
+
+        pstCurrentVideoMemoryAddress += iBulkCount << 3;
+        pstCurrentWindowBufferAddress += iBulkCount << 3;
+        kMemSet(pstDrawBitmap->pbBitmap + iByteOffset, 0x00,
+          iBulkCount);
+
+        iOffsetX += iBulkCount << 3;
+
+        iByteOffset += iBulkCount;
+        iBitOffset = 0;
+      }
+      // 0x00
+      else if ((pstDrawBitmap->pbBitmap[iByteOffset] == 0x00) &&
+        (iBitOffset == 0x00) &&
+        ((iOverlappedWidth - iOffsetX) >= 8))
+      {
+        for (iBulkCount = 0;
+          (iBulkCount < ((iOverlappedWidth - iOffsetX) >> 3));
+          iBulkCount++)
+        {
+          if (pstDrawBitmap->pbBitmap[iByteOffset + iBulkCount] != 0x00)
+          {
+            break;
+          }
+        }
+
+        pstCurrentVideoMemoryAddress += iBulkCount << 3;
+        pstCurrentWindowBufferAddress += iBulkCount << 3;
+
+        iOffsetX += iBulkCount << 3;
+
+        iByteOffset += iBulkCount;
+        iBitOffset = 0;
+      }
+      // Bit
+      else
+      {
+        bTempBitmap = pstDrawBitmap->pbBitmap[iByteOffset];
+
+        iLastBitOffset = MIN(8, iOverlappedWidth - iOffsetX + iBitOffset);
+
+        for (i = iBitOffset; i < iLastBitOffset; i++)
+        {
+          if (bTempBitmap & (0x01 << i))
+          {
+            *pstCurrentVideoMemoryAddress = *pstCurrentWindowBufferAddress;
+
+            bTempBitmap &= ~(0x01 << i);
+          }
+
+          pstCurrentVideoMemoryAddress++;
+          pstCurrentWindowBufferAddress++;
+        }
+
+        iOffsetX += (iLastBitOffset - iBitOffset);
+
+        pstDrawBitmap->pbBitmap[iByteOffset] = bTempBitmap;
+        iByteOffset++;
+        iBitOffset = 0;
+      }
+    }
   }
 }
 
@@ -966,7 +1145,7 @@ void kMoveCursor(int iX, int iY)
   // --- CRITCAL SECTION END ---
 
   // redraw  Window
-  kRedrawWindowByArea(&stPreviousArea);
+  kRedrawWindowByArea(&stPreviousArea, WINDOW_INVALIDID);
 
   // draw Cursor
   kDrawCursor(iX, iY);
@@ -1225,7 +1404,7 @@ BOOL kReceiveEventFromWindowManagerQueue(EVENT* pstEvent)
 }
 
 /*
-  Set Mouse Event 
+  Set Mouse Event
   Mouse Point is Converted to Logical Point.
 */
 BOOL kSetMouseEvent(QWORD qwWindowID, QWORD qwEventType, int iMouseX, int iMouseY,
@@ -1375,7 +1554,7 @@ BOOL kUpdateScreenByScreenArea(const RECT* pstArea)
 }
 
 /*
-  Get Top Window ID that the point be in 
+  Get Top Window ID that the point be in
 */
 QWORD kFindWindowByPoint(int iX, int iY)
 {
@@ -1391,14 +1570,13 @@ QWORD kFindWindowByPoint(int iX, int iY)
   pstWindow = kGetHeaderFromList(&(gs_stWindowManager.stWindowList));
   do
   {
-    pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList), pstWindow);
-
-    if ((pstWindow != NULL) &&
-      (pstWindow->dwFlags & WINDOW_FLAGS_SHOW) &&
+    if ((pstWindow->dwFlags & WINDOW_FLAGS_SHOW) &&
       (kIsInRectangle(&(pstWindow->stArea), iX, iY) == TRUE))
     {
       qwWindowID = pstWindow->stLink.qwID;
+      break;
     }
+    pstWindow = kGetNextFromList(&(gs_stWindowManager.stWindowList), pstWindow);
   } while (pstWindow != NULL);
 
   kUnlock(&(gs_stWindowManager.stLock));
@@ -1456,7 +1634,7 @@ QWORD kGetTopWindowID(void)
   kLock(&(gs_stWindowManager.stLock));
 
   // Get Window List tail 
-  pstActiveWindow = (WINDOW*)kGetTailFromList(&(gs_stWindowManager.stWindowList));
+  pstActiveWindow = (WINDOW*)kGetHeaderFromList(&(gs_stWindowManager.stWindowList));
   if (pstActiveWindow != NULL)
   {
     qwActiveWindowID = pstActiveWindow->stLink.qwID;
@@ -1474,7 +1652,7 @@ QWORD kGetTopWindowID(void)
 
 /*
   Move window To Top and send WINDOW_SELECT Event
-  and send WINDOW_DESELECT to Previous top window 
+  and send WINDOW_DESELECT to Previous top window
 */
 BOOL kMoveWindowToTop(QWORD qwWindowID)
 {
@@ -1494,11 +1672,11 @@ BOOL kMoveWindowToTop(QWORD qwWindowID)
   // --- CRITCAL SECTION BEGIN ---
   kLock(&(gs_stWindowManager.stLock));
 
-  // Remove And Move to Tail
+  // Remove And Move to Header
   pstWindow = kRemoveList(&(gs_stWindowManager.stWindowList), qwWindowID);
   if (pstWindow != NULL)
   {
-    kAddListToTail(&(gs_stWindowManager.stWindowList), pstWindow);
+    kAddListToHeader(&(gs_stWindowManager.stWindowList), pstWindow);
 
     // Store Area and flags for Redraw
     kConvertRectScreenToClient(qwWindowID, &(pstWindow->stArea), &stArea);
@@ -1757,5 +1935,196 @@ BOOL kConvertRectClientToScreen(QWORD qwWindowID, const RECT* pstArea,
   pstAreaInScreen->iY1 = pstArea->iY1 + stWindowArea.iY1;
   pstAreaInScreen->iX2 = pstArea->iX2 + stWindowArea.iX1;
   pstAreaInScreen->iY2 = pstArea->iY2 + stWindowArea.iY1;
+  return TRUE;
+}
+
+/*
+  Create Draw Bitmap using draw Area Info
+*/
+BOOL kCreateDrawBitmap(const RECT* pstArea, DRAWBITMAP* pstDrawBitmap)
+{
+  if (kGetOverlappedRectangle(&(gs_stWindowManager.stScreenArea), pstArea,
+    &(pstDrawBitmap->stArea)) == FALSE)
+  {
+    return FALSE;
+  }
+
+  pstDrawBitmap->pbBitmap = gs_stWindowManager.pbDrawBitmap;
+
+  return kFillDrawBitmap(pstDrawBitmap, &(pstDrawBitmap->stArea), TRUE);
+}
+
+/*
+  Get Bitmap offset using Physical(Screen) Position Info
+*/
+BOOL kGetStartPositionInDrawBitmap(const DRAWBITMAP* pstDrawBitmap,
+  int iX, int iY, int* piByteOffset, int* piBitOffset)
+{
+  int iWidth;
+  int iOffsetX;
+  int iOffsetY;
+
+  if (kIsInRectangle(&(pstDrawBitmap->stArea), iX, iY) == FALSE)
+  {
+    return FALSE;
+  }
+
+  // Calc Offset
+  iOffsetX = iX - pstDrawBitmap->stArea.iX1;
+  iOffsetY = iY - pstDrawBitmap->stArea.iY1;
+  iWidth = kGetRectangleWidth(&(pstDrawBitmap->stArea));
+
+  // Byte Offset (1 Byte = 8 pixel in Bitmap)
+  *piByteOffset = (iOffsetY * iWidth + iOffsetX) >> 3;
+  // Bit Offset
+  *piBitOffset = (iOffsetY * iWidth + iOffsetX) & 0x7;
+
+  return TRUE;
+}
+
+/*
+  Fill overlapeed area in Draw Bitmap
+*/
+static BOOL kFillDrawBitmap(DRAWBITMAP* pstDrawBitmap, RECT* pstArea, BOOL bFill)
+{
+  RECT stOverlappedArea;
+  int iByteOffset;
+  int iBitOffset;
+  int iAreaSize;
+  int iOverlappedWidth;
+  int iOverlappedHeight;
+  BYTE bTempBitmap;
+  int i;
+  int iOffsetX;
+  int iOffsetY;
+  int iBulkCount;
+  int iLastBitOffset;
+
+  if (kGetOverlappedRectangle(&(pstDrawBitmap->stArea), pstArea,
+    &stOverlappedArea) == FALSE)
+  {
+    return FALSE;
+  }
+
+  // Calc Overlapped Area
+  iOverlappedWidth = kGetRectangleWidth(&stOverlappedArea);
+  iOverlappedHeight = kGetRectangleHeight(&stOverlappedArea);
+
+  // Height
+  for (iOffsetY = 0; iOffsetY < iOverlappedHeight; iOffsetY++)
+  {
+    // Get Byte, Bit Offset in Bitmap
+    if (kGetStartPositionInDrawBitmap(pstDrawBitmap, stOverlappedArea.iX1,
+      stOverlappedArea.iY1 + iOffsetY, &iByteOffset, &iBitOffset) ==
+      FALSE)
+    {
+      break;
+    }
+
+    // Width, iOffsetX is Bit offset
+    for (iOffsetX = 0; iOffsetX < iOverlappedWidth; )
+    {
+      // if fill area's width is graeter than or equal to 8 using memset
+      if ((iBitOffset == 0x00) && ((iOverlappedWidth - iOffsetX) >= 8))
+      {
+        iBulkCount = (iOverlappedWidth - iOffsetX) >> 3;
+
+        // Fill Bitmap
+        if (bFill == TRUE)
+        {
+          kMemSet(pstDrawBitmap->pbBitmap + iByteOffset, 0xFF,
+            iBulkCount);
+        }
+        else
+        {
+          kMemSet(pstDrawBitmap->pbBitmap + iByteOffset, 0x00,
+            iBulkCount);
+        }
+
+        iOffsetX += iBulkCount << 3;
+
+        iByteOffset += iBulkCount;
+        iBitOffset = 0;
+      }
+      // Remain part Bit operation
+      else
+      {
+        iLastBitOffset = MIN(8, iOverlappedWidth - iOffsetX + iBitOffset);
+
+        bTempBitmap = 0;
+        for (i = iBitOffset; i < iLastBitOffset; i++)
+        {
+          bTempBitmap |= (0x01 << i);
+        }
+
+        iOffsetX += (iLastBitOffset - iBitOffset);
+
+        // Fill Bitmap
+        if (bFill == TRUE)
+        {
+          pstDrawBitmap->pbBitmap[iByteOffset] |= bTempBitmap;
+        }
+        else
+        {
+          pstDrawBitmap->pbBitmap[iByteOffset] &= ~(bTempBitmap);
+        }
+        iByteOffset++;
+        iBitOffset = 0;
+      }
+    }
+  }
+  return TRUE;
+}
+
+/*
+  Check that Draw Bitmap is all off
+*/
+BOOL kIsDrawBitmapAllOff(const DRAWBITMAP* pstDrawBitmap)
+{
+  int iByteCount;
+  int iLastBitIndex;
+  int iWidth;
+  int iHeight;
+  int i;
+  BYTE* pbTempPosition;
+  int iSize;
+
+  iWidth = kGetRectangleWidth(&(pstDrawBitmap->stArea));
+  iHeight = kGetRectangleHeight(&(pstDrawBitmap->stArea));
+
+  iSize = iWidth * iHeight;
+  iByteCount = iSize >> 3;
+
+  // check 8 Bytes at once
+  pbTempPosition = pstDrawBitmap->pbBitmap;
+  for (i = 0; i < (iByteCount >> 3); i++)
+  {
+    if (*(QWORD*)(pbTempPosition) != 0)
+    {
+      return FALSE;
+    }
+    pbTempPosition += 8;
+  }
+
+  // check Remain Bytes
+  for (i = 0; i < (iByteCount & 0x7); i++)
+  {
+    if (*pbTempPosition != 0)
+    {
+      return FALSE;
+    }
+    pbTempPosition++;
+  }
+
+  // check Remain bits
+  iLastBitIndex = iSize & 0x7;
+  for (i = 0; i < iLastBitIndex; i++)
+  {
+    if (*pbTempPosition & (0x01 << i))
+    {
+      return FALSE;
+    }
+  }
+
   return TRUE;
 }
