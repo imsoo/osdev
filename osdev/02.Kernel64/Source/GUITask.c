@@ -4,6 +4,12 @@
 #include "DynamicMemory.h"
 #include "Font.h"
 #include "MultiProcessor.h"
+#include "Task.h"
+#include "Console.h"
+#include "ConsoleShell.h"
+
+// for GUI Console Shell
+static CHARACTER gs_vstPreviousScreenBuffer[CONSOLE_WIDTH * CONSOLE_HEIGHT];
 
 /*
   Base GUI Task 
@@ -580,4 +586,155 @@ static void kDrawMemoryInformation(QWORD qwWindowID, int iY, int iWindowWidth)
   // Update screen
   kSetRectangleData(0, iY, iWindowWidth, iY + SYSTEMMONITOR_MEMORY_HEIGHT, &stArea);
   kUpdateScreenByWindowArea(qwWindowID, &stArea);
+}
+
+/*
+  GUI Console Shell Task
+*/
+void kGUIConsoleShellTask(void)
+{
+  static QWORD s_qwWindowID = WINDOW_INVALIDID;
+  int iWindowWidth, iWindowHeight;
+  EVENT stReceivedEvent;
+  KEYEVENT* pstKeyEvent;
+  RECT stScreenArea;
+  KEYDATA stKeyData;
+  TCB* pstConsoleShellTask;
+  QWORD qwConsoleShellTaskID;
+
+  // Check GUI Enabled
+  if (kIsGraphicMode() == FALSE) {
+    kPrintf("This task can run only GUI Mode...\n");
+    return;
+  }
+
+  // if shell is exist
+  if (s_qwWindowID != WINDOW_INVALIDID) {
+    kMoveWindowToTop(s_qwWindowID);
+    return;
+  }
+
+  kGetScreenArea(&stScreenArea);
+
+  iWindowWidth = CONSOLE_WIDTH * FONT_ENGLISHWIDTH + 4;
+  iWindowHeight = CONSOLE_HEIGHT * FONT_ENGLISHHEIGHT + WINDOW_TITLEBAR_HEIGHT + 2;
+
+  // Create Console Shell Window
+  s_qwWindowID = kCreateWindow((stScreenArea.iX2 - iWindowWidth) / 2,
+    (stScreenArea.iY2 - iWindowHeight) / 2, iWindowWidth, iWindowHeight,
+    WINDOW_FLAGS_DEFAULT, "Console Shell for GUI");
+  if (s_qwWindowID == WINDOW_INVALIDID) {
+    return;
+  }
+
+  // Create Console Shell Task
+  kSetConsoleShellExitFlag(FALSE);
+  pstConsoleShellTask = kCreateTask(TASK_FLAGS_LOW | TASK_FLAGS_THREAD, 0, 0,
+    (QWORD)kStartConsoleShell, TASK_LOADBALANCINGID);
+  if (pstConsoleShellTask == NULL) {
+    kDeleteWindow(s_qwWindowID);
+    return;
+  }
+  qwConsoleShellTaskID = pstConsoleShellTask->stLink.qwID;
+
+  // Buffer clear
+  kMemSet(gs_vstPreviousScreenBuffer, 0xFF, sizeof(gs_vstPreviousScreenBuffer));
+
+  while (1) {
+    kProcessConsoleBuffer(s_qwWindowID);
+
+    if (kReceiveEventFromWindowQueue(s_qwWindowID, &stReceivedEvent) == FALSE) {
+      kSleep(0);
+      continue;
+    }
+
+    switch (stReceivedEvent.qwType)
+    {
+    case EVENT_KEY_DOWN:
+    case EVENT_KEY_UP:
+      pstKeyEvent = &(stReceivedEvent.stKeyEvent);
+      stKeyData.bASCIICode = pstKeyEvent->bASCIICode;
+      stKeyData.bFlags = pstKeyEvent->bFlags;
+      stKeyData.bScanCode = pstKeyEvent->bScanCode;
+
+      kPutKeyToGUIKeyQueue(&stKeyData);
+      break;
+
+    case EVENT_WINDOW_CLOSE:
+
+      // Wait Shell Task is closed
+      kSetConsoleShellExitFlag(TRUE);
+      while (kIsTaskExist(qwConsoleShellTaskID) == TRUE)
+      {
+        kSleep(1);
+      }
+
+      kDeleteWindow(s_qwWindowID);
+      s_qwWindowID = WINDOW_INVALIDID;
+      return;
+      break;
+
+    default:
+      break;
+    }
+  }
+}
+
+/*
+  Process Console buffer
+*/
+static void kProcessConsoleBuffer(QWORD qwWindowID)
+{
+  int i;
+  int j;
+  CONSOLEMANAGER* pstManager;
+  CHARACTER* pstScreenBuffer;
+  CHARACTER* pstPreviousScreenBuffer;
+  RECT stLineArea;
+  BOOL bChanged;
+  static QWORD s_qwLastTickCount = 0;
+  BOOL bFullRedraw;
+
+  pstManager = kGetConsoleManager();
+  pstScreenBuffer = pstManager->pstScreenBuffer;
+  pstPreviousScreenBuffer = gs_vstPreviousScreenBuffer;
+
+  if (kGetTickCount() - s_qwLastTickCount > 5000) {
+    s_qwLastTickCount = kGetTickCount();
+    bFullRedraw = TRUE;
+  }
+  else {
+    bFullRedraw = FALSE;
+  }
+
+  for (j = 0; j < CONSOLE_HEIGHT; j++) {
+    bChanged = FALSE;
+
+    // Check Line Change
+    for (i = 0; i < CONSOLE_WIDTH; i++) {
+      if ((pstScreenBuffer->bCharactor != pstPreviousScreenBuffer->bCharactor) ||
+        (bFullRedraw == TRUE)) {
+        kDrawText(qwWindowID, i * FONT_ENGLISHWIDTH + 2,
+          j * FONT_ENGLISHHEIGHT + WINDOW_TITLEBAR_HEIGHT,
+          WINDOW_COLOR_WHITE, WINDOW_COLOR_BACKGROUND,
+          &(pstScreenBuffer->bCharactor), 1);
+
+        kMemCpy(pstPreviousScreenBuffer, pstScreenBuffer, sizeof(CHARACTER));
+        bChanged = TRUE;
+      }
+
+      pstScreenBuffer++;
+      pstPreviousScreenBuffer++;
+    }
+
+    // Send Update Event
+    if (bChanged == TRUE)
+    {
+      kSetRectangleData(2, j * FONT_ENGLISHHEIGHT + WINDOW_TITLEBAR_HEIGHT,
+        5 + FONT_ENGLISHWIDTH * CONSOLE_WIDTH,
+        (j + 1) * FONT_ENGLISHHEIGHT + WINDOW_TITLEBAR_HEIGHT - 1,
+        &stLineArea);
+      kUpdateScreenByWindowArea(qwWindowID, &stLineArea);
+    }
+  }
 }

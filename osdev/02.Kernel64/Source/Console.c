@@ -1,9 +1,10 @@
 #include <stdarg.h>
 #include "Console.h"
-#include "Keyboard.h"
+#include "Utility.h"
 
 CONSOLEMANAGER gs_stConsoleManager = { 0, };
-
+static CHARACTER gs_vstScreenBuffer[CONSOLE_WIDTH * CONSOLE_HEIGHT];
+static KEYDATA gs_vstKeyQueueBuffer[CONSOLE_GUIKEYQUEUE_MAXCOUNT];
 /*
   Init Console
 */
@@ -11,6 +12,25 @@ void kInitializeConsole(int iX, int iY)
 {
   // init Console Manager
   kMemSet(&gs_stConsoleManager, 0, sizeof(gs_stConsoleManager));
+
+  // Init Screen Buffer
+  kMemSet(&gs_vstScreenBuffer, 0, sizeof(gs_vstScreenBuffer));
+
+  // Set Screen Buffer
+  if (kIsGraphicMode() == FALSE) {
+    gs_stConsoleManager.pstScreenBuffer = (CHARACTER*)CONSOLE_VIDEOMEMORYADDRESS;
+  }
+  else {
+    gs_stConsoleManager.pstScreenBuffer = gs_vstScreenBuffer;
+
+    // Init Queue
+    kInitializeQueue(&(gs_stConsoleManager.stKeyQueueForGUI),
+      gs_vstKeyQueueBuffer, CONSOLE_GUIKEYQUEUE_MAXCOUNT, sizeof(KEYDATA));
+
+    // Init Mutex
+    kInitializeMutex(&(gs_stConsoleManager.stLock));
+  }
+
   kSetCursor(iX, iY);
 }
 
@@ -20,19 +40,37 @@ void kInitializeConsole(int iX, int iY)
 void kSetCursor(int iX, int iY)
 {
   int iLinearValue;
+  int i;
 
   // Cursor Position
   iLinearValue = iY * CONSOLE_WIDTH + iX;
 
-  // select uppercursor
-  kOutPortByte(VGA_PORT_INDEX, VGA_INDEX_UPPERCURSOR);
-  // write
-  kOutPortByte(VGA_PORT_DATA, iLinearValue >> 8);
+  if (kIsGraphicMode() == FALSE) {
+    // select uppercursor
+    kOutPortByte(VGA_PORT_INDEX, VGA_INDEX_UPPERCURSOR);
+    // write
+    kOutPortByte(VGA_PORT_DATA, iLinearValue >> 8);
 
-  // select lowercursor
-  kOutPortByte(VGA_PORT_INDEX, VGA_INDEX_LOWERCURSOR);
-  // write
-  kOutPortByte(VGA_PORT_DATA, iLinearValue & 0xFF);
+    // select lowercursor
+    kOutPortByte(VGA_PORT_INDEX, VGA_INDEX_LOWERCURSOR);
+    // write
+    kOutPortByte(VGA_PORT_DATA, iLinearValue & 0xFF);
+  }
+  else {
+    // Find Cursur and remove
+    for (i = 0; i < CONSOLE_WIDTH * CONSOLE_HEIGHT; i++) {
+      if ((gs_stConsoleManager.pstScreenBuffer[i].bCharactor == '_') &&
+        (gs_stConsoleManager.pstScreenBuffer[i].bAttribute == 0x00)) {
+        gs_stConsoleManager.pstScreenBuffer[i].bCharactor = ' ';
+        gs_stConsoleManager.pstScreenBuffer[i].bAttribute = CONSOLE_DEFAULTTEXTCOLOR;
+        break;
+      }
+    }
+
+    // Set New cursor
+    gs_stConsoleManager.pstScreenBuffer[iLinearValue].bCharactor = '_';
+    gs_stConsoleManager.pstScreenBuffer[iLinearValue].bAttribute = 0x00;
+  }
 
   // Console Manager Update
   gs_stConsoleManager.iCurrentPrintOffset = iLinearValue;
@@ -73,10 +111,12 @@ void kPrintf(const char* pcFormatString, ...)
 */
 int kConsolePrintString(const char* pcBuffer)
 {
-  CHARACTER* pstScreen = (CHARACTER*)CONSOLE_VIDEOMEMORYADDRESS;
+  CHARACTER* pstScreen;
   int i, j;
   int iLength;
   int iPrintOffset;
+
+  pstScreen = gs_stConsoleManager.pstScreenBuffer;
 
   // set position to print
   iPrintOffset = gs_stConsoleManager.iCurrentPrintOffset;
@@ -106,8 +146,7 @@ int kConsolePrintString(const char* pcBuffer)
     if (iPrintOffset >= (CONSOLE_HEIGHT * CONSOLE_WIDTH))
     {
       // all line up one line except first line 
-      kMemCpy(CONSOLE_VIDEOMEMORYADDRESS,
-        CONSOLE_VIDEOMEMORYADDRESS + CONSOLE_WIDTH * sizeof(CHARACTER),
+      kMemCpy(pstScreen, pstScreen + CONSOLE_WIDTH,
         (CONSOLE_HEIGHT - 1) * CONSOLE_WIDTH * sizeof(CHARACTER));
 
       // last line set blank
@@ -130,8 +169,10 @@ int kConsolePrintString(const char* pcBuffer)
 */
 void kClearScreen(void)
 {
-  CHARACTER* pstScreen = (CHARACTER*)CONSOLE_VIDEOMEMORYADDRESS;
+  CHARACTER* pstScreen;
   int i;
+
+  pstScreen = gs_stConsoleManager.pstScreenBuffer;
 
   // all Char set blank
   for (i = 0; i < CONSOLE_WIDTH * CONSOLE_HEIGHT; i++)
@@ -153,10 +194,22 @@ BYTE kGetCh(void)
  
   while (1)
   {
-    // wait 
-    while (kGetKeyFromKeyQueue(&stData) == FALSE)
-    {
-      kSchedule();
+    if (kIsGraphicMode() == FALSE) {
+      // wait 
+      while (kGetKeyFromKeyQueue(&stData) == FALSE)
+      {
+        kSchedule();
+      }
+    }
+    else {
+      // wait 
+      while (kGetKeyFromGUIKeyQueue(&stData) == FALSE)
+      {
+        if (gs_stConsoleManager.bExit == TRUE) {
+          return 0xFF;
+        }
+        kSchedule();
+      }
     }
 
     // if key down
@@ -172,8 +225,10 @@ BYTE kGetCh(void)
 */
 void kPrintStringXY(int iX, int iY, const char* pcString)
 {
-  CHARACTER* pstScreen = (CHARACTER*)CONSOLE_VIDEOMEMORYADDRESS;
+  CHARACTER* pstScreen;
   int i;
+
+  pstScreen = gs_stConsoleManager.pstScreenBuffer;
 
   pstScreen += (iY * CONSOLE_WIDTH) + iX;
   for (i = 0; pcString[i] != 0; i++)
@@ -183,3 +238,66 @@ void kPrintStringXY(int iX, int iY, const char* pcString)
   }
 }
 
+/*
+  Get console Manager
+*/
+CONSOLEMANAGER* kGetConsoleManager(void)
+{
+  return &gs_stConsoleManager;
+}
+
+/*
+  Get KeyData From GUI Key Queue
+*/
+BOOL kGetKeyFromGUIKeyQueue(KEYDATA* pstData)
+{
+  BOOL bResult;
+
+  if (kIsQueueEmpty(&(gs_stConsoleManager.stKeyQueueForGUI)) == TRUE)
+  {
+    return FALSE;
+  }
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stConsoleManager.stLock));
+
+  // Get from KeyQueue
+  bResult = kGetQueue(&(gs_stConsoleManager.stKeyQueueForGUI), pstData);
+
+  kUnlock(&(gs_stConsoleManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+/*
+  Put KeyData To GUI Key Queue
+*/
+BOOL kPutKeyToGUIKeyQueue(KEYDATA* pstData)
+{
+  BOOL bResult;
+
+  if (kIsQueueFull(&(gs_stConsoleManager.stKeyQueueForGUI)) == TRUE)
+  {
+    return FALSE;
+  }
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stConsoleManager.stLock));
+
+  // Put into KeyQueue
+  bResult = kPutQueue(&(gs_stConsoleManager.stKeyQueueForGUI), pstData);
+
+  kUnlock(&(gs_stConsoleManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+/*
+  Set Shell Exit flag
+*/
+void kSetConsoleShellExitFlag(BOOL bFlag)
+{
+  gs_stConsoleManager.bExit = bFlag;
+}

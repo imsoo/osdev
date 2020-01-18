@@ -2,6 +2,9 @@
 #define __CONSOLE_H__
 
 #include "Types.h"
+#include "Queue.h"
+#include "Synchronization.h"
+#include "Keyboard.h"
 
 // Video Attribute
 #define CONSOLE_BACKGROUND_BLACK            0x00
@@ -45,6 +48,9 @@
 #define VGA_INDEX_UPPERCURSOR       0x0E
 #define VGA_INDEX_LOWERCURSOR       0x0F
 
+// GUI
+#define CONSOLE_GUIKEYQUEUE_MAXCOUNT 100
+
 
 #pragma pack( push, 1 )
 
@@ -52,6 +58,16 @@ typedef struct kConsoleManagerStruct
 {
   // Cursor Position
   int iCurrentPrintOffset;
+
+  // Screen Buffer (CLI or GUI Buffer)
+  CHARACTER* pstScreenBuffer;
+
+  // Key Queue (From Window)
+  QUEUE stKeyQueueForGUI;
+  MUTEX stLock;
+
+  // Exit flag
+  volatile BOOL bExit;
 } CONSOLEMANAGER;
 
 #pragma pack( pop )
@@ -65,5 +81,11 @@ int kConsolePrintString(const char* pcBuffer);
 void kClearScreen(void);
 BYTE kGetCh(void);
 void kPrintStringXY(int iX, int iY, const char* pcString);
+
+// Console Manager
+CONSOLEMANAGER* kGetConsoleManager(void);
+BOOL kGetKeyFromGUIKeyQueue(KEYDATA* pstData);
+BOOL kPutKeyToGUIKeyQueue(KEYDATA* pstData);
+void kSetConsoleShellExitFlag(BOOL bFlag);
 
 #endif /*__CONSOLE_H__*/

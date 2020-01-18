@@ -24,4 +24,8 @@ static void kDrawProcessorInformation(QWORD qwWindowID, int iX, int iY,
   BYTE bAPICID);
 static void kDrawMemoryInformation(QWORD qwWindowID, int iY, int iWindowWidth);
 
+// Console
+void kGUIConsoleShellTask(void);
+static void kProcessConsoleBuffer(QWORD qwWindowID);
+
 #endif // !__GUITASK_H__

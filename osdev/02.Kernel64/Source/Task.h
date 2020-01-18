@@ -205,7 +205,7 @@ BOOL kEndTask(QWORD qwTaskID);
 void kExitTask(void);
 BOOL kIsTaskExist(QWORD qwID);
 QWORD kGetProcessorLoad(BYTE bAPICID);
-void kAddTaskToScheduleWithLoadBalancing(TCB* pstTask);
+void kAddTaskToSchedulerWithLoadBalancing(TCB* pstTask);
 static BYTE kFindSchedulerOfMinimumTaskCount(const TCB* pstTask);
 BYTE kSetTaskLoadBalancing(BYTE bAPICID, BOOL bUseLoadBalancing);
 static BOOL kFindSchedulerOfTaskAndLock(QWORD qwTaskID, BYTE* pbAPICID);

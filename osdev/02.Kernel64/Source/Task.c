@@ -153,7 +153,7 @@ TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD
   pstTask->bAffinity = bAffinity;
 
   // Add Task to Scheduler
-  kAddTaskToScheduleWithLoadBalancing(pstTask);
+  kAddTaskToSchedulerWithLoadBalancing(pstTask);
 
   return pstTask;
 }
@@ -203,7 +203,7 @@ static BYTE kFindSchedulerOfMinimumTaskCount(const TCB* pstTask)
   return bMinCoreIndex;
 }
 
-void kAddTaskToScheduleWithLoadBalancing(TCB* pstTask)
+void kAddTaskToSchedulerWithLoadBalancing(TCB* pstTask)
 {
   BYTE bCurrentAPICID;
   BYTE bTargetAPICID;
@@ -453,6 +453,11 @@ static TCB* kRemoveTaskFromReadyList(BYTE bAPICID, QWORD qwTaskID)
   }
 
   bPriority = GETPRIORITY(pstTarget->qwFlags);
+  if (bPriority >= TASK_MAXREADYLISTCOUNT)
+  {
+    return NULL;
+  }
+
   pstTarget = kRemoveList(&(gs_vstScheduler[bAPICID].vstReadyList[bPriority]), qwTaskID);
 
   return pstTarget;
@@ -716,7 +721,7 @@ BOOL kScheduleInInterrupt(void)
   kMemCpy(pcContextAddress, &(pstNextTask->stContext), sizeof(CONTEXT));
 
   if ((pstRunningTask->qwFlags & TASK_FLAGS_ENDTASK) != TASK_FLAGS_ENDTASK) {
-    kAddTaskToScheduleWithLoadBalancing(pstRunningTask);
+    kAddTaskToSchedulerWithLoadBalancing(pstRunningTask);
   }
 
   gs_vstScheduler[bCurrentAPICID].iProcessorTime = TASK_PROCESSORTIME;
@@ -1049,7 +1054,7 @@ BOOL kChangeProcessorAffinity(QWORD qwTaskID, BYTE bAffinity)
     kUnlockForSpinLock(&(gs_vstScheduler[bAPICID].stSpinLock));
     // --- CRITCAL SECTION END ---
 
-    kAddTaskToScheduleWithLoadBalancing(pstTarget);
+    kAddTaskToSchedulerWithLoadBalancing(pstTarget);
   }
 
   return TRUE;
