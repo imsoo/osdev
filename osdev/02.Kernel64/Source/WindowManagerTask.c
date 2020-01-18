@@ -5,6 +5,7 @@
 #include "Mouse.h"
 #include "Task.h"
 #include "GUITask.h"
+#include "ApplicationPanelTask.h"
 
 /*
   Window Manager Task
@@ -22,6 +23,10 @@ void kStartWindowManager(void)
   // Draw Mouse
   kGetCursorPosition(&iMouseX, &iMouseY);
   kMoveCursor(iMouseX, iMouseY);
+
+  // Create Application Panel
+  kCreateTask(TASK_FLAGS_SYSTEM | TASK_FLAGS_THREAD | TASK_FLAGS_LOW,
+    0, 0, (QWORD)kApplicationPanelGUITask, TASK_LOADBALANCINGID);
 
   while (1)
   {
