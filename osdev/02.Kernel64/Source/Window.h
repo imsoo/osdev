@@ -234,6 +234,7 @@ static void kFreeWindow(QWORD qwID);
 void kInitializeGUISystem(void);
 WINDOWMANAGER* kGetWindowManager(void);
 QWORD kGetBackgroundWindowID(void);
+void kGetScreenArea(RECT* pstScreenArea);
 
 // Window
 QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,

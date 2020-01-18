@@ -205,6 +205,14 @@ QWORD kGetBackgroundWindowID(void)
 }
 
 /*
+  Get Screen Area Info
+*/
+void kGetScreenArea(RECT* pstScreenArea)
+{
+  kMemCpy(pstScreenArea, &(gs_stWindowManager.stScreenArea), sizeof(RECT));
+}
+
+/*
   Create Window
 */
 QWORD kCreateWindow(int iX, int iY, int iWidth, int iHeight, DWORD dwFlags,
