@@ -28,4 +28,11 @@ static void kDrawMemoryInformation(QWORD qwWindowID, int iY, int iWindowWidth);
 void kGUIConsoleShellTask(void);
 static void kProcessConsoleBuffer(QWORD qwWindowID);
 
+// Image Viewer
+void kImageViewerTask(void);
+static void kDrawFileName(QWORD qwWindowID, RECT* pstArea, char *pcFileName,
+  int iNameLength);
+static BOOL kCreateImageViewerWindowAndExecute(QWORD qwMainWindowID,
+  const char* pcFileName);
+
 #endif // !__GUITASK_H__

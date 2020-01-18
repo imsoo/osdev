@@ -110,6 +110,7 @@
     <ClCompile Include="02.Kernel64\Source\HardDisk.c" />
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\IOAPIC.c" />
+    <ClCompile Include="02.Kernel64\Source\JPEG.c" />
     <ClCompile Include="02.Kernel64\Source\Keyborad.c" />
     <ClCompile Include="02.Kernel64\Source\List.c" />
     <ClCompile Include="02.Kernel64\Source\LocalAPIC.c" />
@@ -127,6 +128,7 @@
     <ClCompile Include="02.Kernel64\Source\Task.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="02.Kernel64\Source\VBE.c" />
+    <ClCompile Include="02.Kernel64\Source\WallPaper.c" />
     <ClCompile Include="02.Kernel64\Source\Window.c" />
     <ClCompile Include="02.Kernel64\Source\WindowManagerTask.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
@@ -166,6 +168,7 @@
     <ClInclude Include="02.Kernel64\Source\InterruptHandler.h" />
     <ClInclude Include="02.Kernel64\Source\IOAPIC.h" />
     <ClInclude Include="02.Kernel64\Source\ISR.h" />
+    <ClInclude Include="02.Kernel64\Source\JPEG.h" />
     <ClInclude Include="02.Kernel64\Source\Keyboard.h" />
     <ClInclude Include="02.Kernel64\Source\List.h" />
     <ClInclude Include="02.Kernel64\Source\LocalAPIC.h" />

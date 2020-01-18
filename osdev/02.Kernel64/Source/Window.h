@@ -302,6 +302,9 @@ BOOL kDrawCircle(QWORD qwWindowID, int iX, int iY, int iRadius, COLOR stColor,
   BOOL bFill);
 BOOL kDrawText(QWORD qwWindowID, int iX, int iY, COLOR stTextColor,
   COLOR stBackgroundColor, const char* pcString, int iLength);
+void kDrawBackgroundImage(void);
+BOOL kBitBlt(QWORD qwWindowID, int iX, int iY, COLOR* pstBuffer, int iWidth,
+  int iHeight);
 
 // Draw Bitmap
 BOOL kCreateDrawBitmap(const RECT* pstArea, DRAWBITMAP* pstDrawBitmap);

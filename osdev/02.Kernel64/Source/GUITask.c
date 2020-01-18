@@ -7,6 +7,8 @@
 #include "Task.h"
 #include "Console.h"
 #include "ConsoleShell.h"
+#include "FileSystem.h"
+#include "JPEG.h"
 
 // for GUI Console Shell
 static CHARACTER gs_vstPreviousScreenBuffer[CONSOLE_WIDTH * CONSOLE_HEIGHT];
@@ -737,4 +739,361 @@ static void kProcessConsoleBuffer(QWORD qwWindowID)
       kUpdateScreenByWindowArea(qwWindowID, &stLineArea);
     }
   }
+}
+
+/*
+  Image Viewer Task
+*/
+void kImageViewerTask(void)
+{
+  QWORD qwWindowID;
+  int iMouseX, iMouseY;
+  int iWindowWidth, iWindowHeight;
+  int iEditBoxWidth;
+  RECT stEditBoxArea;
+  RECT stButtonArea;
+  RECT stScreenArea;
+  EVENT stReceivedEvent;
+  EVENT stSendEvent;
+  char vcFileName[FILESYSTEM_MAXFILENAMELENGTH + 1];
+  int iFileNameLength;
+  MOUSEEVENT* pstMouseEvent;
+  KEYEVENT* pstKeyEvent;
+  POINT stScreenXY;
+  POINT stClientXY;
+
+  // Check GUI Enabled
+  if (kIsGraphicMode() == FALSE) {
+    kPrintf("This task can run only GUI Mode...\n");
+    return;
+  }
+
+  // Calc Window area
+  kGetScreenArea(&stScreenArea);
+  iWindowWidth = FONT_ENGLISHWIDTH * FILESYSTEM_MAXFILENAMELENGTH + 165;
+  iWindowHeight = 35 + WINDOW_TITLEBAR_HEIGHT + 5;
+
+  // Create Window
+  qwWindowID = kCreateWindow((stScreenArea.iX2 - iWindowWidth) / 2,
+    (stScreenArea.iY2 - iWindowHeight) / 2, iWindowWidth, iWindowHeight,
+    WINDOW_FLAGS_DEFAULT & ~WINDOW_FLAGS_SHOW, "Image Viewer");
+  if (qwWindowID == WINDOW_INVALIDID)
+  {
+    return;
+  }
+
+  // Draw Edit Box Frame
+  kDrawText(qwWindowID, 5, WINDOW_TITLEBAR_HEIGHT + 6, WINDOW_COLOR_WHITE,
+    WINDOW_COLOR_BACKGROUND, "FILE NAME", 9);
+  iEditBoxWidth = FONT_ENGLISHWIDTH * FILESYSTEM_MAXFILENAMELENGTH + 4;
+  kSetRectangleData(85, WINDOW_TITLEBAR_HEIGHT + 5, 85 + iEditBoxWidth,
+    WINDOW_TITLEBAR_HEIGHT + 25, &stEditBoxArea);
+  kDrawRect(qwWindowID, stEditBoxArea.iX1, stEditBoxArea.iY1,
+    stEditBoxArea.iX2, stEditBoxArea.iY2, WINDOW_COLOR_WHITE, FALSE);
+
+  // Draw Edit Box Text
+  iFileNameLength = 0;
+  kMemSet(vcFileName, 0, sizeof(vcFileName));
+  kDrawFileName(qwWindowID, &stEditBoxArea, vcFileName, iFileNameLength);
+
+  // Draw button
+  kSetRectangleData(stEditBoxArea.iX2 + 10, stEditBoxArea.iY1,
+    stEditBoxArea.iX2 + 70, stEditBoxArea.iY2, &stButtonArea);
+  kDrawButton(qwWindowID, &stButtonArea, WINDOW_COLOR_BACKGROUND, "Show",
+    WINDOW_COLOR_WHITE);
+
+  // Show window
+  kShowWindow(qwWindowID, TRUE);
+
+  while (1)
+  {
+    if (kReceiveEventFromWindowQueue(qwWindowID, &stReceivedEvent) == FALSE)
+    {
+      kSleep(0);
+      continue;
+    }
+
+    switch (stReceivedEvent.qwType)
+    {
+    case EVENT_MOUSE_LBUTTONDOWN:
+      pstMouseEvent = &(stReceivedEvent.stMouseEvent);
+
+      // Check that Button is clicked
+      if (kIsInRectangle(&stButtonArea, pstMouseEvent->stPoint.iX,
+        pstMouseEvent->stPoint.iY) == TRUE)
+      {
+        // Draw Activate button
+        kDrawButton(qwWindowID, &stButtonArea, WINDOW_COLOR_BUTTONACTIVATEBACKGROUND, "Show",
+          WINDOW_COLOR_WHITE);
+        kUpdateScreenByWindowArea(qwWindowID, &(stButtonArea));
+
+        // Create Image Viewer Window 
+        if (kCreateImageViewerWindowAndExecute(qwWindowID, vcFileName)
+          == FALSE)
+        {
+          kSleep(200);
+        }
+
+        // Draw inactivate button
+        kDrawButton(qwWindowID, &stButtonArea, WINDOW_COLOR_BACKGROUND,
+          "Show", WINDOW_COLOR_WHITE);
+        
+        // Screen Update
+        kUpdateScreenByWindowArea(qwWindowID, &(stButtonArea));
+      }
+      break;
+
+    case EVENT_KEY_DOWN:
+      pstKeyEvent = &(stReceivedEvent.stKeyEvent);
+
+      // Backspace : remove one character that in input buffer
+      if ((pstKeyEvent->bASCIICode == KEY_BACKSPACE) &&
+        (iFileNameLength > 0))
+      {
+        vcFileName[iFileNameLength] = '\0';
+        iFileNameLength--;
+
+        kDrawFileName(qwWindowID, &stEditBoxArea, vcFileName,
+          iFileNameLength);
+      }
+      // Enter = Button click, Make Button Click Event
+      else if ((pstKeyEvent->bASCIICode == KEY_ENTER) &&
+        (iFileNameLength > 0))
+      {
+        stClientXY.iX = stButtonArea.iX1 + 1;
+        stClientXY.iY = stButtonArea.iY1 + 1;
+        kConvertPointClientToScreen(qwWindowID, &stClientXY, &stScreenXY);
+
+        kSetMouseEvent(qwWindowID, EVENT_MOUSE_LBUTTONDOWN,
+          stScreenXY.iX + 1, stScreenXY.iY + 1, 0, &stSendEvent);
+        kSendEventToWindow(qwWindowID, &stSendEvent);
+      }
+      // ESC = Close Window, Make Window Close Event
+      else if (pstKeyEvent->bASCIICode == KEY_ESC)
+      {
+        kSetWindowEvent(qwWindowID, EVENT_WINDOW_CLOSE, &stSendEvent);
+        kSendEventToWindow(qwWindowID, &stSendEvent);
+      }
+      // Etc = filename, insert char to input buffer
+      else if ((pstKeyEvent->bASCIICode <= 128) &&
+        (pstKeyEvent->bASCIICode != KEY_BACKSPACE) &&
+        (iFileNameLength < FILESYSTEM_MAXFILENAMELENGTH))
+      {
+        vcFileName[iFileNameLength] = pstKeyEvent->bASCIICode;
+        iFileNameLength++;
+
+        kDrawFileName(qwWindowID, &stEditBoxArea, vcFileName,
+          iFileNameLength);
+      }
+      break;
+
+    case EVENT_WINDOW_CLOSE:
+      if (stReceivedEvent.qwType == EVENT_WINDOW_CLOSE)
+      {
+        kDeleteWindow(qwWindowID);
+        return;
+      }
+      break;
+
+    default:
+      break;
+    }
+  }
+}
+
+/*
+  Draw Filename (imageView Task)
+*/
+static void kDrawFileName(QWORD qwWindowID, RECT* pstArea, char *pcFileName,
+  int iNameLength)
+{
+  kDrawRect(qwWindowID, pstArea->iX1 + 1, pstArea->iY1 + 1, pstArea->iX2 - 1,
+    pstArea->iY2 - 1, WINDOW_COLOR_BACKGROUND, TRUE);
+
+  // Draw File name
+  kDrawText(qwWindowID, pstArea->iX1 + 2, pstArea->iY1 + 2, WINDOW_COLOR_WHITE,
+    WINDOW_COLOR_BACKGROUND, pcFileName, iNameLength);
+
+  // Draw Cursor
+  if (iNameLength < FILESYSTEM_MAXFILENAMELENGTH)
+  {
+    kDrawText(qwWindowID, pstArea->iX1 + 2 + FONT_ENGLISHWIDTH * iNameLength,
+      pstArea->iY1 + 2, WINDOW_COLOR_WHITE, WINDOW_COLOR_BACKGROUND, "_", 1);
+  }
+
+  // Update Screen
+  kUpdateScreenByWindowArea(qwWindowID, pstArea);
+}
+
+/*
+  Read JPEG and Draw 
+*/
+static BOOL kCreateImageViewerWindowAndExecute(QWORD qwMainWindowID,
+  const char* pcFileName)
+{
+  DIR* pstDirectory;
+  struct dirent* pstEntry;
+  DWORD dwFileSize;
+  RECT stScreenArea;
+  QWORD qwWindowID;
+  WINDOW* pstWindow;
+  BYTE* pbFileBuffer;
+  COLOR* pstOutputBuffer;
+  int iWindowWidth;
+  FILE* fp;
+  JPEG* pstJpeg;
+  EVENT stReceivedEvent;
+  KEYEVENT* pstKeyEvent;
+
+  // Init
+  fp = NULL;
+  pbFileBuffer = NULL;
+  pstOutputBuffer = NULL;
+  qwWindowID = WINDOW_INVALIDID;
+
+  // Open Root Dir and Find file
+  pstDirectory = opendir("/");
+  dwFileSize = 0;
+  while (1)
+  {
+    // Read Entry
+    pstEntry = readdir(pstDirectory);
+    if (pstEntry == NULL)
+    {
+      break;
+    }
+
+    // Comapare filename and length
+    if ((kStrLen(pstEntry->d_name) == kStrLen(pcFileName)) &&
+      (kMemCmp(pstEntry->d_name, pcFileName, kStrLen(pcFileName))
+        == 0))
+    {
+      dwFileSize = pstEntry->dwFileSize;
+      break;
+    }
+  }
+  closedir(pstDirectory);
+
+  if (dwFileSize == 0)
+  {
+    kPrintf("[ImageViewer] %s file doesn't exist or size is zero\n", pcFileName);
+    return FALSE;
+  }
+
+  // open file
+  fp = fopen(pcFileName, "rb");
+  if (fp == NULL)
+  {
+    kPrintf("[ImageViewer] %s file open fail\n", pcFileName);
+    return FALSE;
+  }
+
+  // Allocate Buffer for File, JPEG 
+  pbFileBuffer = (BYTE*)kAllocateMemory(dwFileSize);
+  pstJpeg = (JPEG*)kAllocateMemory(sizeof(JPEG));
+  if ((pbFileBuffer == NULL) || (pstJpeg == NULL))
+  {
+    kPrintf("[ImageViewer] Buffer allocation fail\n");
+    kFreeMemory(pbFileBuffer);
+    kFreeMemory(pstJpeg);
+    fclose(fp);
+    return FALSE;
+  }
+
+  // read file and check is file JPEG Format
+  if ((fread(pbFileBuffer, 1, dwFileSize, fp) != dwFileSize) ||
+    (kJPEGInit(pstJpeg, pbFileBuffer, dwFileSize) == FALSE))
+  {
+    kPrintf("[ImageViewer] Read fail or file is not JPEG format\n");
+    kFreeMemory(pbFileBuffer);
+    kFreeMemory(pstJpeg);
+    fclose(fp);
+    return FALSE;
+  }
+
+  // Allocate Result Buffer
+  pstOutputBuffer = kAllocateMemory(pstJpeg->width * pstJpeg->height *
+    sizeof(COLOR));
+
+  // Decode
+  if ((pstOutputBuffer != NULL) &&
+    (kJPEGDecode(pstJpeg, pstOutputBuffer) == TRUE))
+  {
+    // if Success, Create Window
+    kGetScreenArea(&stScreenArea);
+    qwWindowID = kCreateWindow((stScreenArea.iX2 - pstJpeg->width) / 2,
+      (stScreenArea.iY2 - pstJpeg->height) / 2, pstJpeg->width,
+      pstJpeg->height + WINDOW_TITLEBAR_HEIGHT,
+      WINDOW_FLAGS_DEFAULT & ~WINDOW_FLAGS_SHOW, pcFileName);
+  }
+
+  // if Decode fail
+  if ((qwWindowID == WINDOW_INVALIDID) || (pstOutputBuffer == NULL))
+  {
+    kPrintf("[ImageViewer] Window create fail or output buffer allocation fail\n");
+    kFreeMemory(pbFileBuffer);
+    kFreeMemory(pstJpeg);
+    kFreeMemory(pstOutputBuffer);
+    kDeleteWindow(qwWindowID);
+    return FALSE;
+  }
+
+  // copy Image to Window buffer
+  // --- CRITCAL SECTION BEGIN ---
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow != NULL)
+  {
+    iWindowWidth = kGetRectangleWidth(&(pstWindow->stArea));
+    kMemCpy(pstWindow->pstWindowBuffer + (WINDOW_TITLEBAR_HEIGHT *
+      iWindowWidth), pstOutputBuffer, pstJpeg->width *
+      pstJpeg->height * sizeof(COLOR));
+
+    kUnlock(&(pstWindow->stLock));
+    // --- CRITCAL SECTION END ---
+  }
+
+  // Free Buffer
+  kFreeMemory(pbFileBuffer);
+  kFreeMemory(pstJpeg);
+  kFreeMemory(pstOutputBuffer);
+
+  // Show Image Viewer Window
+  // Hide Image Input window
+  kShowWindow(qwWindowID, TRUE);
+  kShowWindow(qwMainWindowID, FALSE);
+
+  while (1)
+  {
+    if (kReceiveEventFromWindowQueue(qwWindowID, &stReceivedEvent) == FALSE)
+    {
+      kSleep(0);
+      continue;
+    }
+
+    switch (stReceivedEvent.qwType)
+    {
+    case EVENT_KEY_DOWN:
+      pstKeyEvent = &(stReceivedEvent.stKeyEvent);
+      if (pstKeyEvent->bASCIICode == KEY_ESC)
+      {
+        kDeleteWindow(qwWindowID);
+        kShowWindow(qwMainWindowID, TRUE);
+        return TRUE;
+      }
+      break;
+
+    case EVENT_WINDOW_CLOSE:
+      if (stReceivedEvent.qwType == EVENT_WINDOW_CLOSE)
+      {
+        kDeleteWindow(qwWindowID);
+        kShowWindow(qwMainWindowID, TRUE);
+        return TRUE;
+      }
+      break;
+
+    default:
+      break;
+    }
+  }
+  return TRUE;
 }
