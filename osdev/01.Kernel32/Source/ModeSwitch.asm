@@ -54,10 +54,11 @@ kSwitchAndExecute64bitKernel:
   mov eax, 0x100000
   mov cr3, eax
 
-  ; set IA32_EFER.LME (Enable IA-32e mode)
+  ; set IA32_EFER.LME(Bit 10) (Enable IA-32e mode)
+  ; set IA32_EFER.SCE(Bit 0) (Enable SystemCall)
   mov ecx, 0xC0000080
   rdmsr
-  or eax, 0x0100  ; set lme bit
+  or eax, 0x0101  ; set LME, SCE bit
   wrmsr
 
   ; CR0 NW(29) = 0, CD(30) = 0, PG(31) = 1

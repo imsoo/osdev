@@ -125,12 +125,15 @@
     <ClCompile Include="02.Kernel64\Source\RTC.c" />
     <ClCompile Include="02.Kernel64\Source\SerialPort.c" />
     <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
+    <ClCompile Include="02.Kernel64\Source\SystemCall.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="02.Kernel64\Source\VBE.c" />
     <ClCompile Include="02.Kernel64\Source\WallPaper.c" />
     <ClCompile Include="02.Kernel64\Source\Window.c" />
     <ClCompile Include="02.Kernel64\Source\WindowManagerTask.c" />
+    <ClCompile Include="03.Application\UserLibrary\Source\SystemCallLibrary.c" />
+    <ClCompile Include="03.Application\UserLibrary\Source\UserLibrary.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
     <ClCompile Include="04.Utility\01.SerialTransfer\NetworkTransfer.c" />
     <ClCompile Include="Makefile" />
@@ -145,6 +148,8 @@
     <None Include="02.Kernel64\Source\AssemblyUtility.asm" />
     <None Include="02.Kernel64\Source\EntryPoint.s" />
     <None Include="02.Kernel64\Source\ISR.asm" />
+    <None Include="02.Kernel64\Source\SystemCallEntryPoint.asm" />
+    <None Include="03.Application\UserLibrary\Source\SystemCall.asm" />
     <None Include="04.Utility\00.ImageMaker\makefile" />
     <None Include="04.Utility\01.SerialTransfer\makefile" />
     <None Include="04.Utility\makefile" />
@@ -182,12 +187,18 @@
     <ClInclude Include="02.Kernel64\Source\RTC.h" />
     <ClInclude Include="02.Kernel64\Source\SerialPort.h" />
     <ClInclude Include="02.Kernel64\Source\Synchronization.h" />
+    <ClInclude Include="02.Kernel64\Source\SystemCall.h" />
+    <ClInclude Include="02.Kernel64\Source\SystemCallList.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />
     <ClInclude Include="02.Kernel64\Source\VBE.h" />
     <ClInclude Include="02.Kernel64\Source\Window.h" />
     <ClInclude Include="02.Kernel64\Source\WindowManagerTask.h" />
+    <ClInclude Include="03.Application\UserLibrary\Source\SystemCallLibrary.h" />
+    <ClInclude Include="03.Application\UserLibrary\Source\SystemCallList.h" />
+    <ClInclude Include="03.Application\UserLibrary\Source\Types.h" />
+    <ClInclude Include="03.Application\UserLibrary\Source\UserLibrary.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

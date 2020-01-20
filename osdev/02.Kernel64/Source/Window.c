@@ -1914,6 +1914,18 @@ QWORD kFindWindowByTitle(const char* pcTitle)
 }
 
 /*
+  Get Window is exist
+*/
+BOOL kIsWindowExist(QWORD qwWindowID)
+{
+  if (kGetWindow(qwWindowID) == NULL)
+  {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/*
   Get Top Window ID
 */
 QWORD kGetTopWindowID(void)

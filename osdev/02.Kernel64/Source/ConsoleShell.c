@@ -16,6 +16,7 @@
 #include "MultiProcessor.h"
 #include "InterruptHandler.h"
 #include "VBE.h"
+#include "SystemCall.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -68,6 +69,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // GUI
   { "vbemodeinfo", "Show VBE Mode Information", kShowVBEModeInfo },
+
+  // Test
+  {"testsystemcall", "Test System Call Operation", kTestSystemCall },
 };
 
 // TCB
@@ -1485,4 +1489,19 @@ static void kShowVBEModeInfo(const char* pcParameterBuffer)
     pstModeInfo->bLinearGreenMaskSize, pstModeInfo->bLinearGreenFieldPosition);
   kPrintf("Linear Blue Mask Size: %d, Field Position: %d\n",
     pstModeInfo->bLinearBlueMaskSize, pstModeInfo->bLinearBlueFieldPosition);
+}
+
+
+// Test
+static void kTestSystemCall(const char* pcParameterBuffer)
+{
+  BYTE* pbUserMemory;
+
+  pbUserMemory = kAllocateMemory(0x1000);
+  if (pbUserMemory == NULL) {
+    return;
+  }
+
+  kMemCpy(pbUserMemory, kSystemCallTestTask, 0x1000);
+  kCreateTask(TASK_FLAGS_USERLEVEL | TASK_FLAGS_PROCESS, pbUserMemory, 0x1000, (QWORD)pbUserMemory, TASK_LOADBALANCINGID);
 }

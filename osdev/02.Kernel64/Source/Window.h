@@ -259,6 +259,7 @@ static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, DRAWBITMAP* 
 
 QWORD kFindWindowByPoint(int iX, int iY);
 QWORD kFindWindowByTitle(const char* pcTitle);
+BOOL kIsWindowExist(QWORD qwWindowID);
 QWORD kGetTopWindowID(void);
 BOOL kMoveWindowToTop(QWORD qwWindowID);
 BOOL kMoveWindow(QWORD qwWindowID, int iX, int iY);

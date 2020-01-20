@@ -16,6 +16,7 @@
 #include "2DGraphics.h"
 #include "MPConfigurationTable.h"
 #include "WindowManagerTask.h"
+#include "SystemCall.h"
 
 // AP C Kernele Entry
 void MainForApplicationProcessor(void);
@@ -138,6 +139,11 @@ void Main(void)
     kPrintf("Fail\n");
   }
 
+  // Init System Call MSR
+  kPrintf("System Call MSR Initialize..................[Pass]\n");
+  iCursorY++;
+  kInitializeSystemCall();
+
   // idle task start
   kCreateTask(TASK_FLAGS_LOWEST | TASK_FLAGS_THREAD | TASK_FLAGS_SYSTEM | TASK_FLAGS_IDLE, 0, 0, (QWORD)kIdleTask, kGetAPICID());
 
@@ -242,6 +248,9 @@ void MainForApplicationProcessor(void)
 
   // Enable Interrupt
   kEnableInterrupt();
+
+  // Init System Call MSR
+  kInitializeSystemCall();
 
   kIdleTask();
 }

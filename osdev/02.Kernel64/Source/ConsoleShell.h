@@ -92,4 +92,7 @@ static void kChangeTaskAffinity(const char* pcParameterBuffer);
 // GUI
 static void kShowVBEModeInfo(const char* pcParameterBuffer);
 
+// Test
+static void kTestSystemCall(const char* pcParameterBuffer);
+
 #endif // __CONSOLESHELL_H__

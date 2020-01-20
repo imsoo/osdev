@@ -12,6 +12,9 @@ WORD kInPortWord(WORD wPort);
 void kOutPortByte(WORD wPort, BYTE bData);
 void kOutPortWord(WORD wPort, WORD wData);
 
+void kReadMSR(QWORD qwMSRAddress, QWORD* pqwRDX, QWORD* pqwRAX);
+void kWriteMSR(QWORD qwMSRAddress, QWORD qwRDX, QWORD qwRAX);
+
 void kLoadGDTR(QWORD qwGDTRAddress);
 void kLoadTR(WORD wTSSSegmentOffset);
 void kLoadIDTR(QWORD qwIDTRAddress);
@@ -38,6 +41,5 @@ void kClearTS(void);
 
 // Local APIC
 void kEnableGlobalLocalAPIC(void);
-
 
 #endif /* __ASSEMBLYUTILITY_H__ */

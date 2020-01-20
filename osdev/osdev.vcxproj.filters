@@ -28,6 +28,9 @@
     <Filter Include="04.Utility\01.SerialTransfer">
       <UniqueIdentifier>{cc985066-2eea-4790-ba68-58c186b323ba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application\UserLibrary">
+      <UniqueIdentifier>{94dc83a3-72dc-421a-8f53-4b1fd1a64cd5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -148,6 +151,15 @@
     <ClCompile Include="02.Kernel64\Source\WallPaper.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\SystemCall.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\UserLibrary\Source\SystemCallLibrary.c">
+      <Filter>03.Application\UserLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\UserLibrary\Source\UserLibrary.c">
+      <Filter>03.Application\UserLibrary</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -183,6 +195,12 @@
     </None>
     <None Include="04.Utility\01.SerialTransfer\makefile">
       <Filter>04.Utility\01.SerialTransfer</Filter>
+    </None>
+    <None Include="02.Kernel64\Source\SystemCallEntryPoint.asm">
+      <Filter>02.Kernel64\Source</Filter>
+    </None>
+    <None Include="03.Application\UserLibrary\Source\SystemCall.asm">
+      <Filter>03.Application\UserLibrary</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -299,6 +317,24 @@
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\JPEG.h">
       <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\SystemCall.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\SystemCallList.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\UserLibrary\Source\SystemCallLibrary.h">
+      <Filter>03.Application\UserLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\UserLibrary\Source\SystemCallList.h">
+      <Filter>03.Application\UserLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\UserLibrary\Source\Types.h">
+      <Filter>03.Application\UserLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\UserLibrary\Source\UserLibrary.h">
+      <Filter>03.Application\UserLibrary</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

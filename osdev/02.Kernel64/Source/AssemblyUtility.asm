@@ -2,7 +2,7 @@
 
 SECTION .text	; define text segment
 
-global kInPortByte, kInPortWord, kOutPortByte, kOutPortWord, kLoadGDTR, kLoadTR, kLoadIDTR
+global kInPortByte, kInPortWord, kOutPortByte, kOutPortWord, kReadMSR, kWriteMSR, kLoadGDTR, kLoadTR, kLoadIDTR
 global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 ; TSC
 global kReadTSC
@@ -66,6 +66,48 @@ kOutPortWord:
 
   pop rax
   pop rdx
+  ret
+
+; read from MSR Register
+;   PARAM : MSR Addr(rdi), RDX(rsi), RAX(rdx)
+kReadMSR:
+  push rdx
+  push rax
+  push rcx
+  push rbx
+
+  mov rbx, rdx
+
+  ; Read MSR
+  mov rcx, rdi
+  rdmsr
+
+  ; Copy 
+  mov qword[rsi], rdx
+  mov qword[rbx], rax
+
+  pop rbx
+  pop rcx
+  pop rax
+  pop rdx
+  ret
+
+; Write to MSR Register
+;   PARAM : MSR Addr(rdi), RDX(rsi), RAX(rdx)
+kWriteMSR:
+  push rbx
+  push rax
+  push rcx
+
+  ; Write
+  mov rcx, rdi
+  mov rax, rdx
+  mov rdx, rsi
+  wrmsr
+
+  pop rcx
+  pop rax
+  pop rbx
   ret
 
 ; load GDT in GDTR
