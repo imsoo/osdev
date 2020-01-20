@@ -2,7 +2,21 @@
 
 SECTION .text       ; define text segment
 
-global ExecuteSystemCall
+global _START, ExecuteSystemCall
+
+extern Main, exit
+
+; Entry Point
+;   Call Application Main Function, call ExitTask System Call
+_START:
+  call Main
+
+  mov rdi, rax
+  call exit
+
+  jmp $
+
+  ret
 
 ; Execute System Call
 ;   PARAM: ServiceNumber, pstParameter

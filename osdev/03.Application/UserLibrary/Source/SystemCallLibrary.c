@@ -225,6 +225,26 @@ BOOL ChangeProcessorAffinity( QWORD qwTaskID, BYTE bAffinity )
     return ( BOOL ) ExecuteSystemCall( SYSCALL_CHANGEPROCESSORAFFINITY, &stParameter );      
 }
 
+QWORD ExecuteProgram(const char* pcFileName, const char* pcArgumentString,
+  BYTE bAffinity)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pcFileName;
+  PARAM(1) = (QWORD)pcArgumentString;
+  PARAM(2) = (QWORD)bAffinity;
+  return ExecuteSystemCall(SYSCALL_EXECUTEPROGRAM, &stParameter);
+}
+
+QWORD CreateThread(QWORD qwEntryPoint, QWORD qwArgument, BYTE bAffinity)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)qwEntryPoint;
+  PARAM(1) = (QWORD)qwArgument;
+  PARAM(2) = (QWORD)bAffinity;
+  PARAM(3) = (QWORD)exit;
+  return ExecuteSystemCall(SYSCALL_CREATETHREAD, &stParameter);
+}
+
 QWORD GetBackgroundWindowID( void )
 {
     return ExecuteSystemCall( SYSCALL_GETBACKGROUNDWINDOWID, NULL );         

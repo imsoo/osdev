@@ -113,6 +113,7 @@
     <ClCompile Include="02.Kernel64\Source\JPEG.c" />
     <ClCompile Include="02.Kernel64\Source\Keyborad.c" />
     <ClCompile Include="02.Kernel64\Source\List.c" />
+    <ClCompile Include="02.Kernel64\Source\Loader.c" />
     <ClCompile Include="02.Kernel64\Source\LocalAPIC.c" />
     <ClCompile Include="02.Kernel64\Source\Main.c" />
     <ClCompile Include="02.Kernel64\Source\Mouse.c" />
@@ -132,6 +133,7 @@
     <ClCompile Include="02.Kernel64\Source\WallPaper.c" />
     <ClCompile Include="02.Kernel64\Source\Window.c" />
     <ClCompile Include="02.Kernel64\Source\WindowManagerTask.c" />
+    <ClCompile Include="03.Application\00.HelloWorld\Source\Main.c" />
     <ClCompile Include="03.Application\UserLibrary\Source\SystemCallLibrary.c" />
     <ClCompile Include="03.Application\UserLibrary\Source\UserLibrary.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
@@ -149,6 +151,9 @@
     <None Include="02.Kernel64\Source\EntryPoint.s" />
     <None Include="02.Kernel64\Source\ISR.asm" />
     <None Include="02.Kernel64\Source\SystemCallEntryPoint.asm" />
+    <None Include="03.Application\00.HelloWorld\makefile" />
+    <None Include="03.Application\makefile" />
+    <None Include="03.Application\UserLibrary\makefile" />
     <None Include="03.Application\UserLibrary\Source\SystemCall.asm" />
     <None Include="04.Utility\00.ImageMaker\makefile" />
     <None Include="04.Utility\01.SerialTransfer\makefile" />
@@ -176,6 +181,7 @@
     <ClInclude Include="02.Kernel64\Source\JPEG.h" />
     <ClInclude Include="02.Kernel64\Source\Keyboard.h" />
     <ClInclude Include="02.Kernel64\Source\List.h" />
+    <ClInclude Include="02.Kernel64\Source\Loader.h" />
     <ClInclude Include="02.Kernel64\Source\LocalAPIC.h" />
     <ClInclude Include="02.Kernel64\Source\Mouse.h" />
     <ClInclude Include="02.Kernel64\Source\MPConfigurationTable.h" />
@@ -195,6 +201,7 @@
     <ClInclude Include="02.Kernel64\Source\VBE.h" />
     <ClInclude Include="02.Kernel64\Source\Window.h" />
     <ClInclude Include="02.Kernel64\Source\WindowManagerTask.h" />
+    <ClInclude Include="03.Application\UserLibrary\Source\OSLibrary.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallLibrary.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallList.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\Types.h" />

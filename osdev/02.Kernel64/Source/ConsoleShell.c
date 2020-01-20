@@ -17,6 +17,7 @@
 #include "InterruptHandler.h"
 #include "VBE.h"
 #include "SystemCall.h"
+#include "Loader.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -70,8 +71,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   // GUI
   { "vbemodeinfo", "Show VBE Mode Information", kShowVBEModeInfo },
 
-  // Test
-  {"testsystemcall", "Test System Call Operation", kTestSystemCall },
+  // Loader
+  { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
+
 };
 
 // TCB
@@ -1491,17 +1493,32 @@ static void kShowVBEModeInfo(const char* pcParameterBuffer)
     pstModeInfo->bLinearBlueMaskSize, pstModeInfo->bLinearBlueFieldPosition);
 }
 
-
-// Test
-static void kTestSystemCall(const char* pcParameterBuffer)
+/*
+  Execute User Application
+*/
+static void kExecuteApplicationProgram(const char* pcParameterBuffer)
 {
-  BYTE* pbUserMemory;
+  PARAMETERLIST stList;
+  char vcFileName[512];
+  char vcArgumentString[1024];
+  QWORD qwID;
 
-  pbUserMemory = kAllocateMemory(0x1000);
-  if (pbUserMemory == NULL) {
+  kInitializeParameter(&stList, pcParameterBuffer);
+  if (kGetNextParameter(&stList, vcFileName) == 0)
+  {
+    kPrintf("ex)exec a.elf argument\n");
     return;
   }
 
-  kMemCpy(pbUserMemory, kSystemCallTestTask, 0x1000);
-  kCreateTask(TASK_FLAGS_USERLEVEL | TASK_FLAGS_PROCESS, pbUserMemory, 0x1000, (QWORD)pbUserMemory, TASK_LOADBALANCINGID);
+  if (kGetNextParameter(&stList, vcArgumentString) == 0)
+  {
+    vcArgumentString[0] = '\0';
+  }
+
+  kPrintf("Execute Program... File [%s], Argument [%s]\n", vcFileName,
+    vcArgumentString);
+
+  // Create Task
+  qwID = kExecuteProgram(vcFileName, vcArgumentString, TASK_LOADBALANCINGID);
+  kPrintf("Task ID = 0x%Q\n", qwID);
 }

@@ -31,6 +31,15 @@
     <Filter Include="03.Application\UserLibrary">
       <UniqueIdentifier>{94dc83a3-72dc-421a-8f53-4b1fd1a64cd5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application\UserLibrary\Source">
+      <UniqueIdentifier>{12692f81-74dc-4036-b75f-fd7efa99915d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\00.HelloWorld">
+      <UniqueIdentifier>{2f5076bc-e824-4c7d-9cae-aea1af71ee40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\00.HelloWorld\Source">
+      <UniqueIdentifier>{92a73617-a905-43d4-88de-97fdafb670bb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -155,10 +164,16 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
     <ClCompile Include="03.Application\UserLibrary\Source\SystemCallLibrary.c">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
     </ClCompile>
     <ClCompile Include="03.Application\UserLibrary\Source\UserLibrary.c">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\00.HelloWorld\Source\Main.c">
+      <Filter>03.Application\00.HelloWorld\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\Loader.c">
+      <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -200,7 +215,16 @@
       <Filter>02.Kernel64\Source</Filter>
     </None>
     <None Include="03.Application\UserLibrary\Source\SystemCall.asm">
+      <Filter>03.Application\UserLibrary\Source</Filter>
+    </None>
+    <None Include="03.Application\UserLibrary\makefile">
       <Filter>03.Application\UserLibrary</Filter>
+    </None>
+    <None Include="03.Application\makefile">
+      <Filter>03.Application</Filter>
+    </None>
+    <None Include="03.Application\00.HelloWorld\makefile">
+      <Filter>03.Application\00.HelloWorld</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -325,16 +349,22 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallLibrary.h">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
     </ClInclude>
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallList.h">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
     </ClInclude>
     <ClInclude Include="03.Application\UserLibrary\Source\Types.h">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
     </ClInclude>
     <ClInclude Include="03.Application\UserLibrary\Source\UserLibrary.h">
-      <Filter>03.Application\UserLibrary</Filter>
+      <Filter>03.Application\UserLibrary\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\UserLibrary\Source\OSLibrary.h">
+      <Filter>03.Application\UserLibrary\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\Loader.h">
+      <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

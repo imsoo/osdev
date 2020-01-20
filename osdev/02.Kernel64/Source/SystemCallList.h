@@ -1,7 +1,7 @@
 #ifndef __SYSTEMCALLLIST_H__
 #define __SYSTEMCALLLIST_H__
 
- // Console I/O
+// Console I/O
 #define SYSCALL_CONSOLEPRINTSTRING          0 
 #define SYSCALL_SETCURSOR                   1 
 #define SYSCALL_GETCURSOR                   2 
@@ -39,6 +39,8 @@
 #define SYSCALL_ISTASKEXIST                 26
 #define SYSCALL_GETPROCESSORLOAD            27
 #define SYSCALL_CHANGEPROCESSORAFFINITY     28
+#define SYSCALL_EXECUTEPROGRAM              29
+#define SYSCALL_CREATETHREAD                30
 
 // GUI 
 #define SYSCALL_GETBACKGROUNDWINDOWID       31
