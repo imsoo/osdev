@@ -22,9 +22,6 @@ void MainForApplicationProcessor(void);
 
 BOOL kChangeMultiCoreMode(void);
 
-// Graphic Mode Test
-void kStartGraphicModeTest();
-
 // C Kernel Entry Point
 void Main(void)
 {

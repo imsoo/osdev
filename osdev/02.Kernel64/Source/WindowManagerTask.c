@@ -1,4 +1,3 @@
-#include "Types.h"
 #include "Window.h"
 #include "WindowManagerTask.h"
 #include "VBE.h"

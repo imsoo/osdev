@@ -1,6 +1,9 @@
 #ifndef __WINDOWMANAGER_H__
 #define __WINDOWMANAGER_H__
 
+#include "Types.h"
+#include "2DGraphics.h"
+
 #define WINDOWMANAGER_DATAACCUMULATECOUNT    20
 
 // Resize Window

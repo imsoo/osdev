@@ -1,6 +1,7 @@
 #include "Task.h"
 #include "MultiProcessor.h"
 #include "Descriptor.h" // for kernel segment
+#include "DynamicMemory.h"
 
 //
 static SCHEDULER gs_vstScheduler[MAXPROCESSORCOUNT];
@@ -107,12 +108,20 @@ TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD
     return NULL;
   }
 
+  // ALlocate Stack Memory
+  pstTask->pvStackAddress = kAllocateMemory(TASK_STACKSIZE);
+  if (pstTask->pvStackAddress == NULL) {
+    kFreeTCB(pstTask->stLink.qwID);
+    return NULL;
+  }
+
   // --- CRITCAL SECTION BEGIN ---
   kLockForSpinLock(&(gs_vstScheduler[bCurrentAPICID].stSpinLock));
 
   pstProcess = kGetProcessByThread(kGetRunningTask(bCurrentAPICID));
   if (pstProcess == NULL) {
     kFreeTCB(pstTask->stLink.qwID);
+    kFreeMemory(pstTask->pvStackAddress);
     kUnlockForSpinLock(&(gs_vstScheduler[bCurrentAPICID].stSpinLock));
     // --- CRITCAL SECTION END ---
     return NULL;
@@ -139,8 +148,7 @@ TCB* kCreateTask(QWORD qwFlags, void* pvMemoryAddress, QWORD qwMemorySize, QWORD
   kUnlockForSpinLock(&(gs_vstScheduler[bCurrentAPICID].stSpinLock));
   // --- CRITCAL SECTION END ---
 
-  pvStackAddress = (void*)(TASK_STACKPOOLADDRESS + (TASK_STACKSIZE * (GETTCBOFFSET(pstTask->stLink.qwID))));
-  kSetUpTask(pstTask, qwFlags, qwEntryPointAddress, pvStackAddress, TASK_STACKSIZE);
+  kSetUpTask(pstTask, qwFlags, qwEntryPointAddress, pstTask->pvStackAddress, TASK_STACKSIZE);
 
   // init Child Thread List
   kInitializeList(&(pstTask->stChildThreadList));
@@ -166,41 +174,41 @@ static BYTE kFindSchedulerOfMinimumTaskCount(const TCB* pstTask)
   BYTE bPriority;
   BYTE i;
   int iCureentTaskCount;
-  int iMinTaskCount;
-  BYTE bMinCoreIndex;
-  int iTempTaskCount;
-  int iProcessorCount;
+int iMinTaskCount;
+BYTE bMinCoreIndex;
+int iTempTaskCount;
+int iProcessorCount;
 
-  iProcessorCount = kGetProcessorCount();
+iProcessorCount = kGetProcessorCount();
 
-  // if Single Processor
-  if (iProcessorCount == 1) {
-    return pstTask->bAPICID;
+// if Single Processor
+if (iProcessorCount == 1) {
+  return pstTask->bAPICID;
+}
+
+bPriority = GETPRIORITY(pstTask->qwFlags);
+
+iCureentTaskCount = kGetListCount(&(gs_vstScheduler[pstTask->bAPICID].vstReadyList[bPriority]));
+
+iMinTaskCount = TASK_MAXCOUNT;
+bMinCoreIndex = pstTask->bAPICID;
+
+// find APICID which has Minimum Task count 
+for (i = 0; i < iProcessorCount; i++) {
+  if (i == pstTask->bAPICID) {
+    continue;
   }
 
-  bPriority = GETPRIORITY(pstTask->qwFlags);
+  iTempTaskCount = kGetListCount(&(gs_vstScheduler[i].vstReadyList[bPriority]));
 
-  iCureentTaskCount = kGetListCount(&(gs_vstScheduler[pstTask->bAPICID].vstReadyList[bPriority]));
-
-  iMinTaskCount = TASK_MAXCOUNT;
-  bMinCoreIndex = pstTask->bAPICID;
-
-  // find APICID which has Minimum Task count 
-  for (i = 0; i < iProcessorCount; i++) {
-    if (i == pstTask->bAPICID) {
-      continue;
-    }
-
-    iTempTaskCount = kGetListCount(&(gs_vstScheduler[i].vstReadyList[bPriority]));
-
-    if ((iTempTaskCount + 2 <= iCureentTaskCount) &&
-      (iTempTaskCount < iMinTaskCount)) {
-      bMinCoreIndex = i;
-      iMinTaskCount = iTempTaskCount;
-    }
+  if ((iTempTaskCount + 2 <= iCureentTaskCount) &&
+    (iTempTaskCount < iMinTaskCount)) {
+    bMinCoreIndex = i;
+    iMinTaskCount = iTempTaskCount;
   }
+}
 
-  return bMinCoreIndex;
+return bMinCoreIndex;
 }
 
 void kAddTaskToSchedulerWithLoadBalancing(TCB* pstTask)
@@ -266,19 +274,33 @@ static void kSetUpTask(TCB* pstTCB, QWORD qwFlags, QWORD qwEntryPointAddress, vo
   // Return Address (kExitTask)
   *(QWORD *)((QWORD)pvStackAddress + qwStackSize - 8) = (QWORD)kExitTask;
 
-  // Segment Selector
-  pstTCB->stContext.vqRegister[TASK_CSOFFSET] = GDT_KERNELCODESEGMENT;
-  pstTCB->stContext.vqRegister[TASK_DSOFFSET] = GDT_KERNELDATASEGMENT;
-  pstTCB->stContext.vqRegister[TASK_ESOFFSET] = GDT_KERNELDATASEGMENT;
-  pstTCB->stContext.vqRegister[TASK_FSOFFSET] = GDT_KERNELDATASEGMENT;
-  pstTCB->stContext.vqRegister[TASK_GSOFFSET] = GDT_KERNELDATASEGMENT;
-  pstTCB->stContext.vqRegister[TASK_SSOFFSET] = GDT_KERNELDATASEGMENT;
+  // if Kernel Task
+  if ((qwFlags & TASK_FLAGS_USERLEVEL) == 0) {
+    // Set Segment Selector
+    pstTCB->stContext.vqRegister[TASK_CSOFFSET] = GDT_KERNELCODESEGMENT | SELECTOR_RPL_0;
+    pstTCB->stContext.vqRegister[TASK_DSOFFSET] = GDT_KERNELDATASEGMENT | SELECTOR_RPL_0;
+    pstTCB->stContext.vqRegister[TASK_ESOFFSET] = GDT_KERNELDATASEGMENT | SELECTOR_RPL_0;
+    pstTCB->stContext.vqRegister[TASK_FSOFFSET] = GDT_KERNELDATASEGMENT | SELECTOR_RPL_0;
+    pstTCB->stContext.vqRegister[TASK_GSOFFSET] = GDT_KERNELDATASEGMENT | SELECTOR_RPL_0;
+    pstTCB->stContext.vqRegister[TASK_SSOFFSET] = GDT_KERNELDATASEGMENT | SELECTOR_RPL_0;
+  }
+  // User Task
+  else {
+    // Set Segment Selector
+    pstTCB->stContext.vqRegister[TASK_CSOFFSET] = GDT_USERCODESEGMENT | SELECTOR_RPL_3;
+    pstTCB->stContext.vqRegister[TASK_DSOFFSET] = GDT_USERDATASEGMENT | SELECTOR_RPL_3;
+    pstTCB->stContext.vqRegister[TASK_ESOFFSET] = GDT_USERDATASEGMENT | SELECTOR_RPL_3;
+    pstTCB->stContext.vqRegister[TASK_FSOFFSET] = GDT_USERDATASEGMENT | SELECTOR_RPL_3;
+    pstTCB->stContext.vqRegister[TASK_GSOFFSET] = GDT_USERDATASEGMENT | SELECTOR_RPL_3;
+    pstTCB->stContext.vqRegister[TASK_SSOFFSET] = GDT_USERDATASEGMENT | SELECTOR_RPL_3;
+  }
 
   // RIP Register
   pstTCB->stContext.vqRegister[TASK_RIPOFFSET] = qwEntryPointAddress;
 
-  // set Interrupt Flags (bit 9)
-  pstTCB->stContext.vqRegister[TASK_RFLAGSOFFSET] |= 0x0200;
+  // set Interrupt Flags (bit 9), IOPL(bit 12 ~ 13) 
+  // User Task can access I/O Port
+  pstTCB->stContext.vqRegister[TASK_RFLAGSOFFSET] |= 0x3200;
 
   // set TCB member
   pstTCB->pvStackAddress = pvStackAddress;
@@ -919,6 +941,8 @@ void kIdleTask(void)
         }
 
         qwTaskID = pstTask->stLink.qwID;
+
+        kFreeMemory(pstTask->pvStackAddress);
         kFreeTCB(qwTaskID);
         kPrintf("IDLE: Task ID[0x%q] is completely ended.\n", qwTaskID);
       }

@@ -23,7 +23,10 @@
         GDT_FLAGS_LOWER_DPL0 | GDT_FLAGS_LOWER_P )
 #define GDT_FLAGS_LOWER_KERNELDATA ( GDT_TYPE_DATA | GDT_FLAGS_LOWER_S | \
         GDT_FLAGS_LOWER_DPL0 | GDT_FLAGS_LOWER_P )
+
 #define GDT_FLAGS_LOWER_TSS ( GDT_FLAGS_LOWER_DPL0 | GDT_FLAGS_LOWER_P )
+
+// User DPL3
 #define GDT_FLAGS_LOWER_USERCODE ( GDT_TYPE_CODE | GDT_FLAGS_LOWER_S | \
         GDT_FLAGS_LOWER_DPL3 | GDT_FLAGS_LOWER_P )
 #define GDT_FLAGS_LOWER_USERDATA ( GDT_TYPE_DATA | GDT_FLAGS_LOWER_S | \
@@ -37,13 +40,15 @@
 // Segment descriptor offset
 #define GDT_KERNELCODESEGMENT 0x08
 #define GDT_KERNELDATASEGMENT 0x10
-#define GDT_TSSSEGMENT        0x18
+#define GDT_USERDATASEGMENT   0x18
+#define GDT_USERCODESEGMENT   0x20
+#define GDT_TSSSEGMENT        0x28
 
 // GDTR start addr, 1Mbyte ~ 264Kbyte Page table
 #define GDTR_STARTADDRESS   0x142000
 
-// 8byte entry, null, kernel code, kernel data
-#define GDT_MAXENTRY8COUNT  3
+// 8byte entry, null, kernel code, kernel data, user data, user code
+#define GDT_MAXENTRY8COUNT  5
 // 16byte entry, TSS
 #define GDT_MAXENTRY16COUNT (MAXPROCESSORCOUNT)
 // GDT table size 3 + 1
@@ -160,6 +165,5 @@ void kInitializeTSSSegment(TSSSEGMENT* pstTSS);
 void kInitializeIDTTables(void);
 void kSetIDTEntry(IDTENTRY* pstEntry, void* pvHandler, WORD wSelector,
   BYTE bIST, BYTE bFlags, BYTE bType);
-void kDummyHandler(void);
 
 #endif

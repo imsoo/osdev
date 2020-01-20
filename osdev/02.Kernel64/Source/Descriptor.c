@@ -21,12 +21,18 @@ void kInitializeGDTTableAndTSS(void)
   // set TSS
   pstTSS = (TSSSEGMENT*)((QWORD)pstEntry + GDT_TABLESIZE);
 
-  // NULL, Code, Data
+  // NULL, Kerenl Code, Data
   kSetGDTEntry8(&(pstEntry[0]), 0, 0, 0, 0, 0);
-  kSetGDTEntry8(&(pstEntry[1]), 0, 0xFFFF, GDT_FLAGS_UPPER_CODE,
+  kSetGDTEntry8(&(pstEntry[1]), 0, 0xFFFFF, GDT_FLAGS_UPPER_CODE,
     GDT_FLAGS_LOWER_KERNELCODE, GDT_TYPE_CODE);
-  kSetGDTEntry8(&(pstEntry[2]), 0, 0xFFFF, GDT_FLAGS_UPPER_DATA,
+  kSetGDTEntry8(&(pstEntry[2]), 0, 0xFFFFF, GDT_FLAGS_UPPER_DATA,
     GDT_FLAGS_LOWER_KERNELDATA, GDT_TYPE_DATA);
+
+  // User Data, Code
+  kSetGDTEntry8(&(pstEntry[3]), 0, 0xFFFFF, GDT_FLAGS_UPPER_DATA,
+    GDT_FLAGS_LOWER_USERDATA, GDT_TYPE_DATA);
+  kSetGDTEntry8(&(pstEntry[4]), 0, 0xFFFFF, GDT_FLAGS_UPPER_DATA,
+    GDT_FLAGS_LOWER_USERCODE, GDT_TYPE_CODE);
 
   // 16 TSS Descriptor
   for (i = 0; i < MAXPROCESSORCOUNT; i++) {
