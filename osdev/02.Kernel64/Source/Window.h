@@ -8,10 +8,13 @@
 #include "2DGraphics.h"
 
 // Window
-#define WINDOW_BACKGROUNDWINDOWTITLE  "SYS_BACKGROUND"
-#define WINDOW_TITLEMAXLENGTH 40
-#define WINDOW_TITLEBAR_HEIGHT      21
-#define WINDOW_XBUTTON_SIZE         19
+#define WINDOW_BACKGROUNDWINDOWTITLE        "SYS_BACKGROUND"
+#define WINDOW_TITLEMAXLENGTH               40
+#define WINDOW_TITLEBAR_HEIGHT              21
+
+#define WINDOW_XBUTTON_SIZE                 19
+#define WINDOW_WIDTH_MIN                     (WINDOW_XBUTTON_SIZE * 2 + 30)
+#define WINDOW_HEIGHT_MIN                    (WINDOW_TITLEBAR_HEIGHT + 30)
 
 // Window Color
 #define WINDOW_COLOR_FRAME                  RGB( 50, 50, 50 )
@@ -43,6 +46,7 @@
 #define WINDOW_FLAGS_SHOW           0x00000001
 #define WINDOW_FLAGS_DRAWFRAME      0x00000002
 #define WINDOW_FLAGS_DRAWTITLE      0x00000004
+#define WINDOW_FLAGS_RESIZABLE      0x00000008
 #define WINDOW_FLAGS_DEFAULT        ( WINDOW_FLAGS_SHOW | WINDOW_FLAGS_DRAWFRAME | \
                                       WINDOW_FLAGS_DRAWTITLE )
 
@@ -211,6 +215,11 @@ typedef struct kWindowManagerStruct
   QWORD qwMovingWindowID;
   BOOL bWindowMoveMode;
 
+  // Resize Window Info
+  BOOL bWindowResizeMode;
+  QWORD qwResizingWindowID;
+  RECT stResizingWindowArea;
+
   // Bitmap for Screen Drawing
   BYTE* pbDrawBitmap;
 
@@ -245,6 +254,7 @@ WINDOW* kGetWindow(QWORD qwWindowID);
 WINDOW* kGetWindowWithWindowLock(QWORD qwWindowID);
 BOOL kShowWindow(QWORD qwWindowID, BOOL bShow);
 BOOL kRedrawWindowByArea(const RECT* pstArea, QWORD qwDrawWindowID);
+BOOL kResizeWindow(QWORD qwWindowID, int iX, int iY, int iWidth, int iHeight);
 static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, DRAWBITMAP* pstDrawBitmap);
 
 QWORD kFindWindowByPoint(int iX, int iY);
@@ -254,6 +264,7 @@ BOOL kMoveWindowToTop(QWORD qwWindowID);
 BOOL kMoveWindow(QWORD qwWindowID, int iX, int iY);
 BOOL kIsInTitleBar(QWORD qwWindowID, int iX, int iY);
 BOOL kIsInCloseButton(QWORD qwWindowID, int iX, int iY);
+BOOL kIsInResizeButton(QWORD qwWindowID, int iX, int iY);
 static BOOL kUpdateWindowTitle(QWORD qwWindowID, BOOL bSelectedTitle);
 
 // Convert Point (Screen <-> Window)

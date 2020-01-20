@@ -178,6 +178,11 @@ void kInitializeGUISystem(void)
   gs_stWindowManager.bWindowMoveMode = FALSE;
   gs_stWindowManager.qwMovingWindowID = WINDOW_INVALIDID;
 
+  // Init Window Resize Info
+  gs_stWindowManager.bWindowResizeMode = FALSE;
+  gs_stWindowManager.qwResizingWindowID = WINDOW_INVALIDID;
+  kMemSet(&(gs_stWindowManager.stResizingWindowArea), 0, sizeof(RECT));
+
   // Create Background Window
   qwBackgroundWindowID = kCreateWindow(0, 0, pstModeInfo->wXResolution, pstModeInfo->wYResolution,
     0, WINDOW_BACKGROUNDWINDOWTITLE);
@@ -655,6 +660,76 @@ BOOL kRedrawWindowByArea(const RECT* pstArea, QWORD qwDrawWindowID)
 }
 
 /*
+  Resize Window
+*/
+BOOL kResizeWindow(QWORD qwWindowID, int iX, int iY, int iWidth, int iHeight)
+{
+  WINDOW* pstWindow;
+  COLOR* pstNewWindowBuffer;
+  COLOR* pstOldwindowBuffer;
+  RECT stPreviousArea;
+
+  // --- CRITCAL SECTION BEGIN ---
+  // Get Window and Lock
+  pstWindow = kGetWindowWithWindowLock(qwWindowID);
+  if (pstWindow == NULL) {
+    return FALSE;
+  }
+
+  if (pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) {
+    if (iWidth < WINDOW_WIDTH_MIN) {
+      iWidth = WINDOW_WIDTH_MIN;
+    }
+
+    if (iHeight < WINDOW_HEIGHT_MIN) {
+      iHeight = WINDOW_HEIGHT_MIN;
+    }
+  }
+
+  // Allocate New Buffer
+  pstNewWindowBuffer = (COLOR*)kAllocateMemory(iWidth * iHeight * sizeof(COLOR));
+  if (pstNewWindowBuffer == NULL) {
+    kUnlock(&(pstWindow->stLock));
+    // --- CRITCAL SECTION END ---
+
+    return FALSE;
+  }
+
+  // Change Buffer Pointer and Free Old Buffer
+  pstOldwindowBuffer = pstWindow->pstWindowBuffer;
+  pstWindow->pstWindowBuffer = pstNewWindowBuffer;
+  kFreeMemory(pstOldwindowBuffer);
+
+  // Update Window Area Info
+  kMemCpy(&stPreviousArea, &(pstWindow->stArea), sizeof(RECT));
+  pstWindow->stArea.iX1 = iX;
+  pstWindow->stArea.iY1 = iY;
+  pstWindow->stArea.iX2 = iX + iWidth - 1;
+  pstWindow->stArea.iY2 = iY + iHeight - 1;
+
+  // Fill Window
+  kDrawWindowBackground(qwWindowID);
+  // Draw window Frame
+  if (pstWindow->dwFlags & WINDOW_FLAGS_DRAWFRAME) {
+    kDrawWindowFrame(pstWindow);
+  }
+  // Draw Title
+  if (pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) {
+    kDrawWindowTitle(qwWindowID, pstWindow->vcWindowTitle, TRUE);
+  }
+
+  kUnlock(&(pstWindow->stLock));
+  // --- CRITCAL SECTION END ---
+
+  if (pstWindow->dwFlags & WINDOW_FLAGS_SHOW) {
+    kUpdateScreenByScreenArea(&stPreviousArea);
+    kShowWindow(qwWindowID, TRUE);
+  }
+
+  return TRUE;
+}
+
+/*
   Copy Area Data from WindowBuffer to Video Memory
 */
 static void kCopyWindowBufferToFrameBuffer(const WINDOW* pstWindow, DRAWBITMAP* pstDrawBitmap)
@@ -986,6 +1061,67 @@ BOOL kDrawWindowTitle(QWORD qwWindowID, const char* pcTitle, BOOL bSelectedTitle
   kUnlock(&(pstWindow->stLock));
   // --- CRITCAL SECTION END ---
 
+  // Draw Resize Button
+  if (pstWindow->dwFlags & WINDOW_FLAGS_RESIZABLE)
+  {
+    // Draw Resize Button
+    stButtonArea.iX1 = iWidth - (WINDOW_XBUTTON_SIZE * 2) - 2;
+    stButtonArea.iY1 = 1;
+    stButtonArea.iX2 = iWidth - WINDOW_XBUTTON_SIZE - 2;
+    stButtonArea.iY2 = WINDOW_XBUTTON_SIZE - 1;
+    kDrawButton(qwWindowID, &stButtonArea, WINDOW_COLOR_BACKGROUND, "",
+      WINDOW_COLOR_BACKGROUND);
+
+    // Find window
+    // --- CRITCAL SECTION BEGIN ---
+    pstWindow = kGetWindowWithWindowLock(qwWindowID);
+    if (pstWindow == NULL)
+    {
+      return FALSE;
+    }
+
+    // Draw Line
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 4, stButtonArea.iY2 - 4, stButtonArea.iX2 - 5,
+      stButtonArea.iY1 + 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 4, stButtonArea.iY2 - 3, stButtonArea.iX2 - 4,
+      stButtonArea.iY1 + 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 5, stButtonArea.iY2 - 3, stButtonArea.iX2 - 4,
+      stButtonArea.iY1 + 4, WINDOW_COLOR_XBUTTONLINECOLOR);
+
+    // Draw Arrow (right upper)
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 9, stButtonArea.iY1 + 3, stButtonArea.iX2 - 4,
+      stButtonArea.iY1 + 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 9, stButtonArea.iY1 + 4, stButtonArea.iX2 - 4,
+      stButtonArea.iY1 + 4, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX2 - 4, stButtonArea.iY1 + 5, stButtonArea.iX2 - 4,
+      stButtonArea.iY1 + 9, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX2 - 5, stButtonArea.iY1 + 5, stButtonArea.iX2 - 5,
+      stButtonArea.iY1 + 9, WINDOW_COLOR_XBUTTONLINECOLOR);
+
+    // Draw Arrow (left lower)
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 4, stButtonArea.iY1 + 8, stButtonArea.iX1 + 4,
+      stButtonArea.iY2 - 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 5, stButtonArea.iY1 + 8, stButtonArea.iX1 + 5,
+      stButtonArea.iY2 - 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 6, stButtonArea.iY2 - 4, stButtonArea.iX1 + 10,
+      stButtonArea.iY2 - 4, WINDOW_COLOR_XBUTTONLINECOLOR);
+    kInternalDrawLine(&stArea, pstWindow->pstWindowBuffer,
+      stButtonArea.iX1 + 6, stButtonArea.iY2 - 3, stButtonArea.iX1 + 10,
+      stButtonArea.iY2 - 3, WINDOW_COLOR_XBUTTONLINECOLOR);
+
+    kUnlock(&(pstWindow->stLock));
+    // --- CRITCAL SECTION END ---
+  }
   return TRUE;
 }
 
@@ -1946,7 +2082,7 @@ BOOL kIsInCloseButton(QWORD qwWindowID, int iX, int iY)
   WINDOW* pstWindow;
 
   pstWindow = kGetWindow(qwWindowID);
-  if ((pstWindow == NULL) &&
+  if ((pstWindow == NULL) ||
     ((pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) == 0))
   {
     return FALSE;
@@ -1955,6 +2091,33 @@ BOOL kIsInCloseButton(QWORD qwWindowID, int iX, int iY)
   // Check
   if (((pstWindow->stArea.iX2 - WINDOW_XBUTTON_SIZE - 1) <= iX) &&
     (iX <= (pstWindow->stArea.iX2 - 1)) &&
+    ((pstWindow->stArea.iY1 + 1) <= iY) &&
+    (iY <= (pstWindow->stArea.iY1 + 1 + WINDOW_XBUTTON_SIZE)))
+  {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/*
+  Check that a point is on Resize button
+*/
+BOOL kIsInResizeButton(QWORD qwWindowID, int iX, int iY)
+{
+  WINDOW* pstWindow;
+
+  pstWindow = kGetWindow(qwWindowID);
+  if ((pstWindow == NULL) ||
+    ((pstWindow->dwFlags & WINDOW_FLAGS_DRAWTITLE) == 0) ||
+    (pstWindow->dwFlags & WINDOW_FLAGS_RESIZABLE) == 0)
+  {
+    return FALSE;
+  }
+
+  // Check
+  if (((pstWindow->stArea.iX2 - (WINDOW_XBUTTON_SIZE * 2) - 2) <= iX) &&
+    (iX <= (pstWindow->stArea.iX2 - (WINDOW_XBUTTON_SIZE * 1) - 2)) &&
     ((pstWindow->stArea.iY1 + 1) <= iY) &&
     (iY <= (pstWindow->stArea.iY1 + 1 + WINDOW_XBUTTON_SIZE)))
   {

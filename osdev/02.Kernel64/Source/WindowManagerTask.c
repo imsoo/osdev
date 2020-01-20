@@ -16,6 +16,7 @@ void kStartWindowManager(void)
   BOOL bMouseDataResult;
   BOOL bKeyDataResult;
   BOOL bEventQueueResult;
+  WINDOWMANAGER* pstWindowManager;
 
   // Init GUI
   kInitializeGUISystem();
@@ -27,6 +28,8 @@ void kStartWindowManager(void)
   // Create Application Panel
   kCreateTask(TASK_FLAGS_SYSTEM | TASK_FLAGS_THREAD | TASK_FLAGS_LOW,
     0, 0, (QWORD)kApplicationPanelGUITask, TASK_LOADBALANCINGID);
+
+  pstWindowManager = kGetWindowManager();
 
   while (1)
   {
@@ -41,6 +44,11 @@ void kStartWindowManager(void)
     while (kProcessEventQueueData() == TRUE)
     {
       bEventQueueResult = TRUE;
+    }
+
+    if ((bEventQueueResult == TRUE) &&
+      (pstWindowManager->bWindowResizeMode == TRUE)) {
+      kDrawResizeMarker(&(pstWindowManager->stResizingWindowArea), TRUE);
     }
 
     if ((bMouseDataResult == FALSE) &&
@@ -68,6 +76,7 @@ BOOL kProcessMouseData(void)
   WINDOWMANAGER* pstWindowManager;
   char vcTempTitle[WINDOW_TITLEMAXLENGTH];
   int i;
+  int iWidth, iHeight;
 
   pstWindowManager = kGetWindowManager();
 
@@ -134,6 +143,16 @@ BOOL kProcessMouseData(void)
             &stEvent);
           kSendEventToWindow(qwWindowIDUnderMouse, &stEvent);
         }
+        // Resize Button
+        else if (kIsInResizeButton(qwWindowIDUnderMouse, iMouseX, iMouseY) == TRUE)
+        {
+          // Set Resize Info
+          pstWindowManager->bWindowResizeMode = TRUE;
+          pstWindowManager->qwResizingWindowID = qwWindowIDUnderMouse;
+          kGetWindowArea(qwWindowIDUnderMouse, &(pstWindowManager->stResizingWindowArea));
+          // Draw Marker
+          kDrawResizeMarker(&(pstWindowManager->stResizingWindowArea), TRUE);
+        }
         // Move
         else
         {
@@ -150,9 +169,30 @@ BOOL kProcessMouseData(void)
     }
     // L Button Up
     else {
+      // is moving
       if (pstWindowManager->bWindowMoveMode == TRUE) {
         pstWindowManager->bWindowMoveMode = FALSE;
         pstWindowManager->qwMovingWindowID = WINDOW_INVALIDID;
+      }
+      // is resizing
+      else if (pstWindowManager->bWindowResizeMode == TRUE) {
+        // Resize Window
+        iWidth = kGetRectangleWidth(&(pstWindowManager->stResizingWindowArea));
+        iHeight = kGetRectangleHeight(&(pstWindowManager->stResizingWindowArea));
+        kResizeWindow(pstWindowManager->qwResizingWindowID,
+          pstWindowManager->stResizingWindowArea.iX1,
+          pstWindowManager->stResizingWindowArea.iY1,
+          iWidth, iHeight);
+
+        // Remove Marker
+        kDrawResizeMarker(&(pstWindowManager->stResizingWindowArea), FALSE);
+
+        kSetWindowEvent(pstWindowManager->qwResizingWindowID, EVENT_WINDOW_RESIZE, &stEvent);
+        kSendEventToWindow(pstWindowManager->qwResizingWindowID, &stEvent);
+
+        // Reset Resize Info
+        pstWindowManager->bWindowResizeMode = FALSE;
+        pstWindowManager->qwResizingWindowID = WINDOW_INVALIDID;
       }
       else {
         kSetMouseEvent(qwWindowIDUnderMouse, EVENT_MOUSE_LBUTTONUP,
@@ -220,6 +260,29 @@ BOOL kProcessMouseData(void)
       pstWindowManager->qwMovingWindowID = WINDOW_INVALIDID;
     }
   }
+  // Process window Resize Move
+  else if (pstWindowManager->bWindowResizeMode == TRUE) {
+    // Remove Previous Marker
+    kDrawResizeMarker(&(pstWindowManager->stResizingWindowArea), FALSE);
+
+    // Update Resizing Window Area Info
+    pstWindowManager->stResizingWindowArea.iX2 += iMouseX - iPreviousMouseX;
+    pstWindowManager->stResizingWindowArea.iY1 += iMouseY - iPreviousMouseY;
+
+    // Check Area
+    if ((pstWindowManager->stResizingWindowArea.iX2 < pstWindowManager->stResizingWindowArea.iX1) ||
+      (kGetRectangleWidth(&(pstWindowManager->stResizingWindowArea)) < WINDOW_WIDTH_MIN)) {
+      pstWindowManager->stResizingWindowArea.iX2 = pstWindowManager->stResizingWindowArea.iX1 + WINDOW_WIDTH_MIN - 1;
+    }
+    if ((pstWindowManager->stResizingWindowArea.iY2 < pstWindowManager->stResizingWindowArea.iY1) ||
+      (kGetRectangleHeight(&(pstWindowManager->stResizingWindowArea)) < WINDOW_HEIGHT_MIN)) {
+      pstWindowManager->stResizingWindowArea.iY1 = pstWindowManager->stResizingWindowArea.iY2 - WINDOW_HEIGHT_MIN - 1;
+    }
+
+    // Draw New Marker
+    kDrawResizeMarker(&(pstWindowManager->stResizingWindowArea), TRUE);
+  }
+
 
   pstWindowManager->bPreviousButtonStatus = bButtonStatus;
   return TRUE;
@@ -362,4 +425,98 @@ BOOL kProcessEventQueueData(void)
   }
 
   return TRUE;
+}
+
+/*
+  Draw Resize Marker
+*/
+void kDrawResizeMarker(const RECT* pstArea, BOOL bShowMarker)
+{
+  RECT stMarkerArea;
+  WINDOWMANAGER* pstWindowManager;
+
+  pstWindowManager = kGetWindowManager();
+
+  // Draw Marker
+  if (bShowMarker == TRUE)
+  {
+    // Draw Left Upper
+    kSetRectangleData(pstArea->iX1, pstArea->iY1,
+      pstArea->iX1 + WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY1 + WINDOWMANAGER_RESIZEMARKERSIZE, &stMarkerArea);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY1,
+      stMarkerArea.iX2, stMarkerArea.iY1 + WINDOWMANAGER_THICK_RESIZEMARKER,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY1,
+      stMarkerArea.iX1 + WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iY2,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+
+    // Draw Right Upper
+    kSetRectangleData(pstArea->iX2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY1, pstArea->iX2, pstArea->iY1 + WINDOWMANAGER_RESIZEMARKERSIZE,
+      &stMarkerArea);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY1,
+      stMarkerArea.iX2, stMarkerArea.iY1 + WINDOWMANAGER_THICK_RESIZEMARKER,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX2 -
+      WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iY1,
+      stMarkerArea.iX2, stMarkerArea.iY2, WINDOWMANAGER_COLOR_RESIZEMARKER,
+      TRUE);
+
+    // Draw Left Lower
+    kSetRectangleData(pstArea->iX1, pstArea->iY2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iX1 + WINDOWMANAGER_RESIZEMARKERSIZE, pstArea->iY2, &stMarkerArea);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY2 -
+      WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iX2, stMarkerArea.iY2,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY1,
+      stMarkerArea.iX1 + WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iY2,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+
+    // Draw Right Lower
+    kSetRectangleData(pstArea->iX2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY2 - WINDOWMANAGER_RESIZEMARKERSIZE, pstArea->iX2, pstArea->iY2,
+      &stMarkerArea);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX1, stMarkerArea.iY2 -
+      WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iX2, stMarkerArea.iY2,
+      WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+    kInternalDrawRect(&(pstWindowManager->stScreenArea),
+      pstWindowManager->pstVideoMemory, stMarkerArea.iX2 -
+      WINDOWMANAGER_THICK_RESIZEMARKER, stMarkerArea.iY1, stMarkerArea.iX2,
+      stMarkerArea.iY2, WINDOWMANAGER_COLOR_RESIZEMARKER, TRUE);
+  }
+
+  // Remove Marker
+  else
+  {
+    // Draw Left Upper
+    kSetRectangleData(pstArea->iX1, pstArea->iY1,
+      pstArea->iX1 + WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY1 + WINDOWMANAGER_RESIZEMARKERSIZE, &stMarkerArea);
+    kRedrawWindowByArea(&stMarkerArea, WINDOW_INVALIDID);
+
+    // Draw Right Upper
+    kSetRectangleData(pstArea->iX2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY1, pstArea->iX2, pstArea->iY1 + WINDOWMANAGER_RESIZEMARKERSIZE,
+      &stMarkerArea);
+    kRedrawWindowByArea(&stMarkerArea, WINDOW_INVALIDID);
+
+    // Draw Left Lower
+    kSetRectangleData(pstArea->iX1, pstArea->iY2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iX1 + WINDOWMANAGER_RESIZEMARKERSIZE, pstArea->iY2, &stMarkerArea);
+    kRedrawWindowByArea(&stMarkerArea, WINDOW_INVALIDID);
+
+    // Draw Left Lower
+    kSetRectangleData(pstArea->iX2 - WINDOWMANAGER_RESIZEMARKERSIZE,
+      pstArea->iY2 - WINDOWMANAGER_RESIZEMARKERSIZE, pstArea->iX2, pstArea->iY2,
+      &stMarkerArea);
+    kRedrawWindowByArea(&stMarkerArea, WINDOW_INVALIDID);
+  }
 }
