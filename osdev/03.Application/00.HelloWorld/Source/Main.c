@@ -37,7 +37,7 @@ int Main( char* pcArgument )
     
     if( IsGraphicMode() == FALSE )
     {        
-        printf( "This task can run only GUI mode~!!!\n" );
+        printf("This task can run only GUI Mode...\n");
         return -1;
     }
     

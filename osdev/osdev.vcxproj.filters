@@ -40,6 +40,12 @@
     <Filter Include="03.Application\00.HelloWorld\Source">
       <UniqueIdentifier>{92a73617-a905-43d4-88de-97fdafb670bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application\01.TextViewer">
+      <UniqueIdentifier>{e26b02f4-a7f1-4c45-bda1-5d87fe953eda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\01.TextViewer\Source">
+      <UniqueIdentifier>{ffe97d33-138d-4c2f-a706-50eebfabf359}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -175,6 +181,9 @@
     <ClCompile Include="02.Kernel64\Source\Loader.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="03.Application\01.TextViewer\Source\Main.c">
+      <Filter>03.Application\01.TextViewer\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -225,6 +234,9 @@
     </None>
     <None Include="03.Application\00.HelloWorld\makefile">
       <Filter>03.Application\00.HelloWorld</Filter>
+    </None>
+    <None Include="03.Application\01.TextViewer\makefile">
+      <Filter>03.Application\01.TextViewer</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -365,6 +377,9 @@
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\Loader.h">
       <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\01.TextViewer\Source\Main.h">
+      <Filter>03.Application\01.TextViewer\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

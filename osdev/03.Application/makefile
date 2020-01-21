@@ -1,4 +1,4 @@
-all: OSLibrary HelloWorld
+all: OSLibrary HelloWorld TextViewer
 
 OSLibrary:
 	@echo 
@@ -22,6 +22,18 @@ HelloWorld:
 	@echo =============== Build Complete ===============
 	@echo 
 
+TextViewer:
+	@echo 
+	@echo ============= Build TextViewer ===============
+	@echo 
+	
+	make -C 01.TextViewer
+
+	@echo 
+	@echo =============== Build TextViewer ===============
+	@echo 
+
 clean:
 	make -C UserLibrary clean
 	make -C 00.HelloWorld clean
+	make -C 01.TextViewer clean
