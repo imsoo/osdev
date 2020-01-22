@@ -135,6 +135,8 @@
     <ClCompile Include="02.Kernel64\Source\WindowManagerTask.c" />
     <ClCompile Include="03.Application\00.HelloWorld\Source\Main.c" />
     <ClCompile Include="03.Application\01.TextViewer\Source\Main.c" />
+    <ClCompile Include="03.Application\02.Shooter\Source\Main.c" />
+    <ClCompile Include="03.Application\03.Hexa\Source\Main.c" />
     <ClCompile Include="03.Application\UserLibrary\Source\SystemCallLibrary.c" />
     <ClCompile Include="03.Application\UserLibrary\Source\UserLibrary.c" />
     <ClCompile Include="04.Utility\00.ImageMaker\ImageMaker.c" />
@@ -154,6 +156,8 @@
     <None Include="02.Kernel64\Source\SystemCallEntryPoint.asm" />
     <None Include="03.Application\00.HelloWorld\makefile" />
     <None Include="03.Application\01.TextViewer\makefile" />
+    <None Include="03.Application\02.Shooter\makefile" />
+    <None Include="03.Application\03.Hexa\makefile" />
     <None Include="03.Application\makefile" />
     <None Include="03.Application\UserLibrary\makefile" />
     <None Include="03.Application\UserLibrary\Source\SystemCall.asm" />
@@ -204,6 +208,8 @@
     <ClInclude Include="02.Kernel64\Source\Window.h" />
     <ClInclude Include="02.Kernel64\Source\WindowManagerTask.h" />
     <ClInclude Include="03.Application\01.TextViewer\Source\Main.h" />
+    <ClInclude Include="03.Application\02.Shooter\Source\Main.h" />
+    <ClInclude Include="03.Application\03.Hexa\Source\Main.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\OSLibrary.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallLibrary.h" />
     <ClInclude Include="03.Application\UserLibrary\Source\SystemCallList.h" />

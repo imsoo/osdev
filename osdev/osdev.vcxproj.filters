@@ -46,6 +46,18 @@
     <Filter Include="03.Application\01.TextViewer\Source">
       <UniqueIdentifier>{ffe97d33-138d-4c2f-a706-50eebfabf359}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application\02.Shooter">
+      <UniqueIdentifier>{6454d55d-8412-4dd6-8f23-b4038053d9df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\02.Shooter\Source">
+      <UniqueIdentifier>{25bab72b-ee13-4c40-ada7-822079651cb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\03.Hexa">
+      <UniqueIdentifier>{b8fe9587-d790-47a6-9791-1cea99be29f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\03.Hexa\Source">
+      <UniqueIdentifier>{c061d776-25ee-4b34-a1ad-2aefb6155398}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -184,6 +196,12 @@
     <ClCompile Include="03.Application\01.TextViewer\Source\Main.c">
       <Filter>03.Application\01.TextViewer\Source</Filter>
     </ClCompile>
+    <ClCompile Include="03.Application\02.Shooter\Source\Main.c">
+      <Filter>03.Application\02.Shooter\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\03.Hexa\Source\Main.c">
+      <Filter>03.Application\03.Hexa\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -237,6 +255,12 @@
     </None>
     <None Include="03.Application\01.TextViewer\makefile">
       <Filter>03.Application\01.TextViewer</Filter>
+    </None>
+    <None Include="03.Application\02.Shooter\makefile">
+      <Filter>03.Application\02.Shooter</Filter>
+    </None>
+    <None Include="03.Application\03.Hexa\makefile">
+      <Filter>03.Application\03.Hexa</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -380,6 +404,12 @@
     </ClInclude>
     <ClInclude Include="03.Application\01.TextViewer\Source\Main.h">
       <Filter>03.Application\01.TextViewer\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\02.Shooter\Source\Main.h">
+      <Filter>03.Application\02.Shooter\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\03.Hexa\Source\Main.h">
+      <Filter>03.Application\03.Hexa\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
