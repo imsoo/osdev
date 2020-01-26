@@ -7,6 +7,9 @@
 #define MIN( x, y )     ( ( ( x ) < ( y ) ) ? ( x ) : ( y ) )
 #define MAX( x, y )     ( ( ( x ) > ( y ) ) ? ( x ) : ( y ) )
 
+#define htons(X)        kSwitchEndianWord(X)
+#define htonl(X)        kSwitchEndianDWord(X)
+
 extern volatile QWORD g_qwTickCount;
 
 QWORD kGetTickCount(void);
@@ -33,5 +36,8 @@ int kSPrintf(char* pcBuffer, const char* pcFormatString, ...);
 int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap);
 
 BOOL kIsGraphicMode(void);
+
+WORD kSwitchEndianWord(WORD wValue);
+DWORD kSwitchEndianDWord(DWORD dwValue);
 
 #endif /* __UTILITY_H__ */

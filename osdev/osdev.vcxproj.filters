@@ -202,12 +202,23 @@
     <ClCompile Include="03.Application\03.Hexa\Source\Main.c">
       <Filter>03.Application\03.Hexa\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\PCI.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\Ethernet.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\ARP.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\E1000.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
       <Filter>00.BootLoader</Filter>
     </None>
-    <None Include="..\run.bat" />
     <None Include="01.Kernel32\Makefile">
       <Filter>01.Kernel32</Filter>
     </None>
@@ -262,6 +273,8 @@
     <None Include="03.Application\03.Hexa\makefile">
       <Filter>03.Application\03.Hexa</Filter>
     </None>
+    <None Include="..\run_bochs.bat" />
+    <None Include="..\run.bat" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01.Kernel32\Source\Types.h">
@@ -410,6 +423,18 @@
     </ClInclude>
     <ClInclude Include="03.Application\03.Hexa\Source\Main.h">
       <Filter>03.Application\03.Hexa\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\PCI.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\Ethernet.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\ARP.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\E1000.h">
+      <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

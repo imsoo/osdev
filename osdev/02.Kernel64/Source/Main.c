@@ -127,7 +127,7 @@ void Main(void)
   kPrintf("Serial Port Initialize......................[Pass]\n");
   iCursorY++;
   kInitializeSerialPort();
-
+  
   // Change to multicore Processor Mode
   kPrintf("Change To MultiCore Processor Mode..........[    ]");
   if (kChangeMultiCoreMode() == TRUE) {

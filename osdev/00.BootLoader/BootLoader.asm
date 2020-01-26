@@ -88,6 +88,7 @@ READ_DATA:
   add al, 0x01
   mov byte[SECTOR_NUMBER], al
   cmp al, 19
+  ;cmp al, 37
   jl READ_DATA
 
   ; if sector read done 1 ~ 18

@@ -18,6 +18,7 @@
 #include "VBE.h"
 #include "SystemCall.h"
 #include "Loader.h"
+#include "Ethernet.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -73,7 +74,8 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // Loader
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
-
+  { "i", "InitEthernet(temp)" , kTest },
+  { "s", "send ARP(temp)" , kTestSend },
 };
 
 // TCB
@@ -1521,4 +1523,14 @@ static void kExecuteApplicationProgram(const char* pcParameterBuffer)
   // Create Task
   qwID = kExecuteProgram(vcFileName, vcArgumentString, TASK_LOADBALANCINGID);
   kPrintf("Task ID = 0x%Q\n", qwID);
+}
+
+static void kTest(const char* pcParameterBuffer)
+{
+  kEthernet_Initialize();
+}
+
+static void kTestSend(const char* pcParameterBuffer)
+{
+  kEthernet_TS();
 }

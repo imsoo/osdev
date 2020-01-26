@@ -7,10 +7,12 @@
 // Read from Port
 BYTE kInPortByte(WORD wPort);
 WORD kInPortWord(WORD wPort);
+DWORD kInPortDWord(WORD wPort);
 
 // Write to Port
 void kOutPortByte(WORD wPort, BYTE bData);
 void kOutPortWord(WORD wPort, WORD wData);
+void kOutPortDWord(WORD wPort, DWORD wData);
 
 void kReadMSR(QWORD qwMSRAddress, QWORD* pqwRDX, QWORD* pqwRAX);
 void kWriteMSR(QWORD qwMSRAddress, QWORD qwRDX, QWORD qwRAX);

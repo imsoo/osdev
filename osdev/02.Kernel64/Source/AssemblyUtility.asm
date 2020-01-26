@@ -2,7 +2,8 @@
 
 SECTION .text	; define text segment
 
-global kInPortByte, kInPortWord, kOutPortByte, kOutPortWord, kReadMSR, kWriteMSR, kLoadGDTR, kLoadTR, kLoadIDTR
+global kInPortByte, kInPortWord, kInPortDWord, kOutPortByte, kOutPortWord, kOutPortDWord
+global kReadMSR, kWriteMSR, kLoadGDTR, kLoadTR, kLoadIDTR
 global kEnableInterrupt, kDisableInterrupt, kReadRFLAGS
 ; TSC
 global kReadTSC
@@ -40,6 +41,18 @@ kInPortWord:
   pop rdx
   ret
 
+; read from port one DWORD
+;   PARAM port_num
+kInPortDWord:
+  push rdx
+
+  mov rdx, rdi
+  mov rax, 0
+  in eax, dx
+
+  pop rdx
+  ret
+
 ; write to port one byte
 ;   PARAM port_num, data
 kOutPortByte:
@@ -63,6 +76,21 @@ kOutPortWord:
   mov rdx, rdi
   mov rax, rsi
   out dx, ax
+
+  pop rax
+  pop rdx
+  ret
+
+
+; write to port one DWORD
+;   PARAM port_num, data
+kOutPortDWord:
+  push rdx
+  push rax
+
+  mov rdx, rdi
+  mov rax, rsi
+  out dx, eax
 
   pop rax
   pop rdx

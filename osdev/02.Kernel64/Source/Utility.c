@@ -553,3 +553,14 @@ BOOL kIsGraphicMode(void)
   }
   return TRUE;
 }
+
+WORD kSwitchEndianWord(WORD wValue) {
+  return (wValue >> 8) | (wValue << 8);
+}
+
+DWORD kSwitchEndianDWord(DWORD dwValue) {
+  return ((dwValue >> 24) & 0xff) |
+    ((dwValue << 8) & 0xff0000) |
+    ((dwValue >> 8) & 0xff00) |
+    ((dwValue << 24) & 0xff000000);
+}

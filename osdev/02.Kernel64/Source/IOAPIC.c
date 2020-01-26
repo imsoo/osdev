@@ -136,6 +136,27 @@ void kInitializeIORedirectionTable(void)
     case MP_ENTRYTYPE_IOINTERRUPTASSIGNMENT:
       pstIOAssignmentEntry = (IOINTERRUPTASSIGNMENTENTRY*)qwEntryAddress;
 
+      
+      // PCI Test Temp
+      // TODO : 이더넷 인터럽트 설정 루틴 개선
+      if ((pstIOAssignmentEntry->bSourceBUSID == 0) &&
+        (pstIOAssignmentEntry->bInterruptType == MP_INTERRUPTTYPE_INT)) {
+
+        if (pstIOAssignmentEntry->bSourceBUSIRQ == 12) {
+          bDestination = 0x00;
+
+          // Set Table Entry
+          kSetIOAPICRedirectionEntry(&stIORedirectionEntry, bDestination, 0x00,
+            IOAPIC_TRIGGERMODE_EDGE | IOAPIC_POLARITY_ACTIVEHIGH | IOAPIC_DESTINATIONMODE_PHYSICALMODE | IOAPIC_DELIVERYMODE_FIXED,
+            PIC_IRQSTARTVECTOR + pstIOAssignmentEntry->bSourceBUSIRQ - 1);
+          kWriteIOAPICRedirectionTable(pstIOAssignmentEntry->bDestinationIOAPICINTIN, &stIORedirectionEntry);
+
+          // Set IRQ <-> INITI Map Table 
+          gs_stIOAPICManager.vbIRQToINTINMap[pstIOAssignmentEntry->bSourceBUSIRQ - 1] = pstIOAssignmentEntry->bDestinationIOAPICINTIN;
+        }
+      }
+      
+
       // Check Source Bus ID, Interrupt Type
       if ((pstIOAssignmentEntry->bSourceBUSID == pstMPManager->bISABusID) &&
         (pstIOAssignmentEntry->bInterruptType == MP_INTERRUPTTYPE_INT)) {

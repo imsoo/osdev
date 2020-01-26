@@ -9,6 +9,7 @@
 #include "AssemblyUtility.h"
 #include "HardDisk.h"
 #include "LocalAPIC.h"
+#include "Ethernet.h"
 
 static INTERRUPTMANAGER gs_stInterruptManager;
 
@@ -163,7 +164,7 @@ void kCommonInterruptHandler(int iVectorNumber)
 
   vcBuffer[8] = '0' + g_iCommonInterruptCount;
   g_iCommonInterruptCount = (g_iCommonInterruptCount + 1) % 10;
-  kPrintStringXY(70, 0, vcBuffer);
+  kPrintStringXY(20, 0, vcBuffer);
 
   iIRQ = iVectorNumber - PIC_IRQSTARTVECTOR;
 
@@ -374,6 +375,32 @@ void kHDDHandler(int iVectorNumber)
     kSetHDDInterruptFlag(FALSE, TRUE);
   }
   
+  // Send EOI
+  kSendEOI(iIRQ);
+
+  // Update Interrupt Count
+  kIncreaseInterruptCount(iIRQ);
+
+  // Interrupt Load Balancing
+  kProcessLoadBalancing(iIRQ);
+}
+
+void kEthernetHandler(int iVectorNumber)
+{
+  char vcBuffer[] = "[INT:  , ]";
+  static int g_iEthernetInterruptCount = 0;
+  int iIRQ;
+
+  vcBuffer[5] = '0' + iVectorNumber / 10;
+  vcBuffer[6] = '0' + iVectorNumber % 10;
+
+  vcBuffer[8] = '0' + g_iEthernetInterruptCount;
+  g_iEthernetInterruptCount = (g_iEthernetInterruptCount + 1) % 10;
+  kPrintStringXY(30, 0, vcBuffer);
+
+  iIRQ = iVectorNumber - PIC_IRQSTARTVECTOR;
+
+  kEthernet_Handler();
 
   // Send EOI
   kSendEOI(iIRQ);

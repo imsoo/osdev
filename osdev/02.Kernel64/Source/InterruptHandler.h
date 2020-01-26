@@ -35,6 +35,7 @@ void kMouseHandler(int iVectorNumber);
 void kTimerHandler(int iVectorNumber);
 void kDeviceNotAvailableHandler(int iVectorNumber);
 void kHDDHandler(int iVectorNumber);
+void kEthernetHandler(int iVectorNumber);
 
 
 #endif // !__INTERRUPTHANDLER_H__
