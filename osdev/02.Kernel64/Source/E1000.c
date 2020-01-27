@@ -1,3 +1,4 @@
+#include "Ethernet.h"
 #include "E1000.h"
 #include "AssemblyUtility.h"
 #include "Utility.h"
@@ -77,7 +78,7 @@ BOOL kE1000_Send(const void* pvData, WORD wLen)
   return TRUE;
 }
 
-void kE1000_Receive(void)
+BOOL kE1000_Receive(FRAME* pstFrame)
 {
   int i;
   WORD wOldRxTail;
@@ -89,16 +90,18 @@ void kE1000_Receive(void)
     pbReceiveBuf = (BYTE*)gs_stE1000Manager.vpstRxDescriptor[gs_stE1000Manager.wRxTail]->qwAddr;
     wReceiveLen = gs_stE1000Manager.vpstRxDescriptor[gs_stE1000Manager.wRxTail]->wLength;
 
-    kE1000_PrintPacket(pbReceiveBuf, wReceiveLen);
+    kMemCpy(pstFrame->pbBuf, pbReceiveBuf, wReceiveLen);
+    pstFrame->wLen = wReceiveLen;
 
     gs_stE1000Manager.vpstRxDescriptor[gs_stE1000Manager.wRxTail]->bStatus = 0;
     wOldRxTail = gs_stE1000Manager.wRxTail;
     gs_stE1000Manager.wRxTail = (gs_stE1000Manager.wRxTail + 1) % DESC_RX_NUM;
     kE1000_WriteCommand(REG_RDT, wOldRxTail);
   }
+  return TRUE;
 }
 
-void kE1000_Handler(void)
+HANDLERSTATUS kE1000_Handler(void)
 {
   DWORD dwStatus;
 
@@ -107,18 +110,18 @@ void kE1000_Handler(void)
 
   // 링크 상태 변경 (LSC : Bit 2) 
   if (dwStatus & 0x04) {
-    kE1000_SetLinkUp();
+    return HANDLER_LSC;
   }
   // threshold 미만 (RXDMT : Bit 4)
   else if (dwStatus & 0x10) {
-    // 
     kPrintf("Receive Descriptor Minimum Threshold hit\n");
+    return HANDLER_RXDMT;
   }
   // 패킷 대기중 (RXT0 : Bit 7)
   else if (dwStatus & 0x80) {
-    // 패킷 수신
-    kE1000_Receive();
+    return HANDLER_RXT0;
   }
+  return HANDLER_UNKNOWN;
 }
 
 
@@ -341,23 +344,4 @@ void kE1000_WriteDWORD(QWORD wAddress, DWORD dwValue)
 DWORD kE1000_ReadDWORD(QWORD wAddress)
 {
   return *((volatile DWORD*)(wAddress));
-}
-
-void kE1000_PrintPacket(void* pvBuf, DWORD dwLen)
-{
-  int i, j;
-  BYTE* pbBuf = NULL;
-
-  if (pvBuf == NULL)
-    return;
-
-  pbBuf = pvBuf;
-
-  for (i = 0; i < dwLen; i++) {
-    kPrintf("%x\t", pbBuf[i]);
-
-    if (i % 8 == 7)
-      kPrintf("\n");
-  }
-  kPrintf("\n");
 }

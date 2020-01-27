@@ -96,5 +96,6 @@ static void kShowVBEModeInfo(const char* pcParameterBuffer);
 static void kExecuteApplicationProgram(const char* pcParameterBuffer);
 static void kTest(const char* pcParameterBuffer);
 static void kTestSend(const char* pcParameterBuffer);
+static void kTestPrint(const char* pcParameterBuffer);
 
 #endif // __CONSOLESHELL_H__

@@ -2,6 +2,7 @@
 #define __E1000_H__
 
 #include "Types.h"
+#include "Frame.h"
 
 // Desc
 #define DESC_RX_NUM 32
@@ -132,15 +133,15 @@ typedef struct kE1000Manager
 // function
 BOOL kE1000_Initialize(QWORD qwMMIOAddress, WORD wIOAddress);
 BOOL kE1000_Send(const void* pvData, WORD wLen);
-void kE1000_Handler(void);
-void kE1000_Receive(void);
+HANDLERSTATUS kE1000_Handler(void);
+BOOL kE1000_Receive(FRAME* pstFrame);
 BOOL kE1000_ReadMACAddress(BYTE* pbBuf);
+void kE1000_SetLinkUp(void);
 
 // TODO : 내부 함수 static으로 변경
 BOOL kE1000_RxInit(void);
 BOOL kE1000_TxInit(void);
 void kE1000_MulticastTableArrayInit(void);
-void kE1000_SetLinkUp(void);
 void kE1000_EnableInterrupt(void);
 
 static BOOL kE1000_DetectEEPROM(void);

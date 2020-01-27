@@ -9,6 +9,10 @@
 
 #define htons(X)        kSwitchEndianWord(X)
 #define htonl(X)        kSwitchEndianDWord(X)
+#define ntohs(X)        kSwitchEndianWord(X)
+#define ntohl(X)        kSwitchEndianDWord(X)
+
+#define HASH(K, L)      kJenkinsOneAtATimeHash(K, L)
 
 extern volatile QWORD g_qwTickCount;
 
@@ -39,5 +43,9 @@ BOOL kIsGraphicMode(void);
 
 WORD kSwitchEndianWord(WORD wValue);
 DWORD kSwitchEndianDWord(DWORD dwValue);
+
+DWORD kJenkinsOneAtATimeHash(const BYTE* key, QWORD qwLen);
+QWORD kAddressArrayToNumber(const BYTE* pbAddress, BYTE bLen);
+void kNumberToAddressArray(BYTE* pbAddress, QWORD qwNum, BYTE bLen);
 
 #endif /* __UTILITY_H__ */

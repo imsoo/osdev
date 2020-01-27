@@ -564,3 +564,40 @@ DWORD kSwitchEndianDWord(DWORD dwValue) {
     ((dwValue >> 8) & 0xff00) |
     ((dwValue << 24) & 0xff000000);
 }
+
+DWORD kJenkinsOneAtATimeHash(const BYTE* pbKey, QWORD qwLen)
+{
+  QWORD i = 0;
+  DWORD hash = 0;
+  while (i != qwLen) {
+    hash += pbKey[i++];
+    hash += hash << 10;
+    hash ^= hash >> 6;
+  }
+  hash += hash << 3;
+  hash ^= hash >> 11;
+  hash += hash << 15;
+  return hash;
+}
+
+QWORD kAddressArrayToNumber(const BYTE* pbAddress, BYTE bLen)
+{
+  int i = 0;
+  QWORD qwOutput = 0;
+
+  while (i != bLen) {
+    qwOutput = (qwOutput << 8) + pbAddress[i++];
+  }
+
+  return qwOutput;
+}
+
+void kNumberToAddressArray(BYTE* pbAddress, QWORD qwNum, BYTE bLen)
+{
+  int i = 0;
+
+  while (i != bLen) {
+    pbAddress[i] = (qwNum >> ((bLen - i - 1) * 8));
+    i++;
+  }
+}

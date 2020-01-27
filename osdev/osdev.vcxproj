@@ -109,8 +109,10 @@
     <ClCompile Include="02.Kernel64\Source\EnglishFont.c" />
     <ClCompile Include="02.Kernel64\Source\Ethernet.c" />
     <ClCompile Include="02.Kernel64\Source\FileSystem.c" />
+    <ClCompile Include="02.Kernel64\Source\Frame.c" />
     <ClCompile Include="02.Kernel64\Source\GUITask.c" />
     <ClCompile Include="02.Kernel64\Source\HardDisk.c" />
+    <ClCompile Include="02.Kernel64\Source\IP.c" />
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\IOAPIC.c" />
     <ClCompile Include="02.Kernel64\Source\JPEG.c" />
@@ -187,8 +189,10 @@
     <ClInclude Include="02.Kernel64\Source\Ethernet.h" />
     <ClInclude Include="02.Kernel64\Source\FileSystem.h" />
     <ClInclude Include="02.Kernel64\Source\Font.h" />
+    <ClInclude Include="02.Kernel64\Source\Frame.h" />
     <ClInclude Include="02.Kernel64\Source\GUITask.h" />
     <ClInclude Include="02.Kernel64\Source\HardDisk.h" />
+    <ClInclude Include="02.Kernel64\Source\IP.h" />
     <ClInclude Include="02.Kernel64\Source\InterruptHandler.h" />
     <ClInclude Include="02.Kernel64\Source\IOAPIC.h" />
     <ClInclude Include="02.Kernel64\Source\ISR.h" />

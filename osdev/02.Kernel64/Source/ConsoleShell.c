@@ -19,6 +19,8 @@
 #include "SystemCall.h"
 #include "Loader.h"
 #include "Ethernet.h"
+#include "IP.h"
+#include "ARP.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -74,8 +76,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // Loader
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
-  { "i", "InitEthernet(temp)" , kTest },
-  { "s", "send ARP(temp)" , kTestSend },
+  { "init", "InitEthernet(temp)" , kTest },
+  { "sendarp", "send ARP(temp)" , kTestSend },
+  { "printarp", "print ARP Table(temp)" , kTestPrint },
 };
 
 // TCB
@@ -1527,10 +1530,34 @@ static void kExecuteApplicationProgram(const char* pcParameterBuffer)
 
 static void kTest(const char* pcParameterBuffer)
 {
-  kEthernet_Initialize();
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kEthernet_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kEthernet_Task Fail\n");
+    return;
+  }
+
+  kSleep(100);
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kARP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kInternet_Task Fail\n");
+  }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kIP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kIP_Task Fail\n");
+  }
 }
 
 static void kTestSend(const char* pcParameterBuffer)
 {
-  kEthernet_TS();
+  kARP_Send();
+}
+
+static void kTestPrint(const char* pcParameterBuffer)
+{
+  kARPTable_Print();
 }

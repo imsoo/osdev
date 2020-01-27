@@ -4,51 +4,80 @@
 #include "DynamicMemory.h"
 #include "AssemblyUtility.h"
 #include "Utility.h"
+#include "IP.h"
 #include "ARP.h"
 #include "Console.h" // for temp
 
 static ETHERNETMANAGER gs_stEthernetManager = { 0, };
-
 static BYTE gs_vbBroadCast[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-
-void kEthernet_TS(void)
+BOOL kEthernet_DownDirectionPoint(FRAME stFrame)
 {
-  int i;
-  ETHERNET_HEADER stEthernetFrame;
-  ARP_HEADER stARPPacket;
+  stFrame.eDirection = FRAME_IN;
+  if (kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame) == FALSE)
+    return FALSE;
+  return TRUE;
+}
 
-  stARPPacket.wHardwareType = htons(0x0001);
-  stARPPacket.wProtocolType = htons(0x0800);
-  stARPPacket.bHadrwareAddressLength = 0x6;
-  stARPPacket.bProtocolAddressLength = 0x4;
-  stARPPacket.wOperation = htons(0x0001);
+void kEthernet_Task(void)
+{
+  FRAME stFrame;
+  ETHERNET_HEADER stEthernetHeader, *pstEthernetHeader;
 
-  for (i = 0; i < 6; i++) {
-    gs_stEthernetManager.pfGetAddress(stARPPacket.vbSenderHardwareAddress);
-    stARPPacket.vbTargetHardwareAddress[i] = 0xFF;
-  }
-
-  // QEMU Virtual Network Device : 10.0.2.15
-  stARPPacket.vbSenderProtocolAddress[0] = 10;
-  stARPPacket.vbSenderProtocolAddress[1] = 0;
-  stARPPacket.vbSenderProtocolAddress[2] = 2;
-  stARPPacket.vbSenderProtocolAddress[3] = 15;
-
-  // QEMU DNS : 10.0.2.3
-  stARPPacket.vbTargetProtocolAddress[0] = 10;
-  stARPPacket.vbTargetProtocolAddress[1] = 0;
-  stARPPacket.vbTargetProtocolAddress[2] = 2;
-  stARPPacket.vbTargetProtocolAddress[3] = 3;
+  // 초기화
+  if (kEthernet_Initialize() == FALSE)
+    return;
 
   // Ethernet Frame
-  kMemCpy(stEthernetFrame.vbDestinationMACAddress, gs_vbBroadCast, 6);
-  kMemCpy(stEthernetFrame.vbSourceMACAddress, stARPPacket.vbSenderHardwareAddress, 6);
-  stEthernetFrame.wType = htons(0x0806);
-  kMemCpy(stEthernetFrame.vbPayload, &stARPPacket, sizeof(stARPPacket));
+  stEthernetHeader.vbSourceMACAddress[0] = 0x52;
+  stEthernetHeader.vbSourceMACAddress[1] = 0x54;
+  stEthernetHeader.vbSourceMACAddress[2] = 0x00;
+  stEthernetHeader.vbSourceMACAddress[3] = 0x12;
+  stEthernetHeader.vbSourceMACAddress[4] = 0x34;
+  stEthernetHeader.vbSourceMACAddress[5] = 0x56;
 
-  // Send
-  gs_stEthernetManager.pfSend(&stEthernetFrame, 28 + 14);
+  kMemCpy(stEthernetHeader.vbDestinationMACAddress, gs_vbBroadCast, 6);
+  stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_ARP);
+
+  while (1)
+  {
+    if (kGetQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame) == FALSE) {
+      kSleep(0);
+      continue;
+    }
+
+    switch (stFrame.eDirection)
+    {
+    case FRAME_OUT:
+      pstEthernetHeader = (ETHERNET_HEADER*)stFrame.pbCur;
+      stFrame.wLen -= sizeof(ETHERNET_HEADER);
+      stFrame.pbCur += sizeof(ETHERNET_HEADER);
+      if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_ARP) {
+
+        gs_stEthernetManager.pfSideOut(stFrame);
+      }
+      else 
+        gs_stEthernetManager.pfUp(stFrame);
+      break;
+    case FRAME_IN:
+
+      switch (stFrame.bType)
+      {
+      case FRAME_ARP:
+        kNumberToAddressArray(stEthernetHeader.vbDestinationMACAddress, stFrame.qwDestAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+        stFrame.wLen += sizeof(ETHERNET_HEADER);
+        stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
+        kMemCpy(stFrame.pbCur, &stEthernetHeader, sizeof(ETHERNET_HEADER));
+        gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
+
+        kFreeFrame(&stFrame);
+      default:
+        break;
+      }
+
+      break;
+    }
+  }
 }
 
 /*
@@ -66,6 +95,20 @@ BOOL kEthernet_Initialize(void)
 
   QWORD qwIOAddress;
   QWORD qwMMIOAddress;
+
+  // Allocate Frame Queue
+  gs_stEthernetManager.pstFrameBuffer= (FRAME*)kAllocateMemory(FRAME_QUEUE_MAX_COUNT * sizeof(FRAME));
+  if (gs_stEthernetManager.pstFrameBuffer == NULL) {
+    kPrintf("kEthernet_Initialize | FrameBuffer Allocate Fail\n");
+    return FALSE;
+  }
+
+  // Inint Frame Queue
+  kInitializeQueue(&(gs_stEthernetManager.stFrameQueue), gs_stEthernetManager.pstFrameBuffer, FRAME_QUEUE_MAX_COUNT, sizeof(FRAME));
+
+  // 레이어 설정
+  gs_stEthernetManager.pfUp = kIP_UpDirectionPoint;
+  gs_stEthernetManager.pfSideOut = kARP_SideInPoint;
 
   // 모든 Bus와 Device를 탐색하여
   // Ethernet Controller 를 찾습니다.
@@ -134,8 +177,10 @@ BOOL kEthernet_SetDriver(WORD wVendor, WORD wDevice)
     {
       gs_stEthernetManager.pfInit = kE1000_Initialize;
       gs_stEthernetManager.pfSend = kE1000_Send;
+      gs_stEthernetManager.pfRecevie = kE1000_Receive;
       gs_stEthernetManager.pfHandler = kE1000_Handler;
       gs_stEthernetManager.pfGetAddress = kE1000_ReadMACAddress;
+      gs_stEthernetManager.pfLinkUp = kE1000_SetLinkUp;
     }
     return TRUE;
   default:
@@ -146,5 +191,28 @@ BOOL kEthernet_SetDriver(WORD wVendor, WORD wDevice)
 
 void kEthernet_Handler(void)
 {
-  gs_stEthernetManager.pfHandler();
+  HANDLERSTATUS eStatus;
+  FRAME stFrame;
+
+  eStatus = gs_stEthernetManager.pfHandler();
+  
+  switch (eStatus)
+  {
+  case HANDLER_LSC:
+    gs_stEthernetManager.pfLinkUp();
+    break;
+  case HANDLER_RXDMT:
+    // do nothing
+    break;
+  case HANDLER_RXT0:
+    if (kAllocateFrame(&stFrame) == TRUE) {
+      gs_stEthernetManager.pfRecevie(&stFrame);
+      stFrame.eDirection = FRAME_OUT;
+      kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame);
+    }
+    break;
+  case HANDLER_UNKNOWN:
+    // do nothing
+    break;
+  }
 }

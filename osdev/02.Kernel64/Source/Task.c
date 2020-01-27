@@ -174,41 +174,41 @@ static BYTE kFindSchedulerOfMinimumTaskCount(const TCB* pstTask)
   BYTE bPriority;
   BYTE i;
   int iCureentTaskCount;
-int iMinTaskCount;
-BYTE bMinCoreIndex;
-int iTempTaskCount;
-int iProcessorCount;
+  int iMinTaskCount;
+  BYTE bMinCoreIndex;
+  int iTempTaskCount;
+  int iProcessorCount;
 
-iProcessorCount = kGetProcessorCount();
+  iProcessorCount = kGetProcessorCount();
 
-// if Single Processor
-if (iProcessorCount == 1) {
-  return pstTask->bAPICID;
-}
-
-bPriority = GETPRIORITY(pstTask->qwFlags);
-
-iCureentTaskCount = kGetListCount(&(gs_vstScheduler[pstTask->bAPICID].vstReadyList[bPriority]));
-
-iMinTaskCount = TASK_MAXCOUNT;
-bMinCoreIndex = pstTask->bAPICID;
-
-// find APICID which has Minimum Task count 
-for (i = 0; i < iProcessorCount; i++) {
-  if (i == pstTask->bAPICID) {
-    continue;
+  // if Single Processor
+  if (iProcessorCount == 1) {
+    return pstTask->bAPICID;
   }
 
-  iTempTaskCount = kGetListCount(&(gs_vstScheduler[i].vstReadyList[bPriority]));
+  bPriority = GETPRIORITY(pstTask->qwFlags);
 
-  if ((iTempTaskCount + 2 <= iCureentTaskCount) &&
-    (iTempTaskCount < iMinTaskCount)) {
-    bMinCoreIndex = i;
-    iMinTaskCount = iTempTaskCount;
+  iCureentTaskCount = kGetListCount(&(gs_vstScheduler[pstTask->bAPICID].vstReadyList[bPriority]));
+
+  iMinTaskCount = TASK_MAXCOUNT;
+  bMinCoreIndex = pstTask->bAPICID;
+
+  // find APICID which has Minimum Task count 
+  for (i = 0; i < iProcessorCount; i++) {
+    if (i == pstTask->bAPICID) {
+      continue;
+    }
+
+    iTempTaskCount = kGetListCount(&(gs_vstScheduler[i].vstReadyList[bPriority]));
+
+    if ((iTempTaskCount + 2 <= iCureentTaskCount) &&
+      (iTempTaskCount < iMinTaskCount)) {
+      bMinCoreIndex = i;
+      iMinTaskCount = iTempTaskCount;
+    }
   }
-}
 
-return bMinCoreIndex;
+  return bMinCoreIndex;
 }
 
 void kAddTaskToSchedulerWithLoadBalancing(TCB* pstTask)
