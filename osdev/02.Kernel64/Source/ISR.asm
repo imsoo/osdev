@@ -403,7 +403,7 @@ kISRReserved:
     KSAVECONTEXT     
 
     mov rdi, 41
-    call kCommonInterruptHandler
+    call kEthernetHandler
 
     KLOADCONTEXT     
     iretq            

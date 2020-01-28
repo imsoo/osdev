@@ -220,6 +220,15 @@
     <ClCompile Include="02.Kernel64\Source\IP.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\ICMP.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\UDP.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\DHCP.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -446,6 +455,15 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\IP.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\ICMP.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\UDP.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\DHCP.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

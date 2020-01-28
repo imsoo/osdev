@@ -21,6 +21,7 @@
 #include "Ethernet.h"
 #include "IP.h"
 #include "ARP.h"
+#include "ICMP.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -76,9 +77,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
 
   // Loader
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
-  { "init", "InitEthernet(temp)" , kTest },
-  { "sendarp", "send ARP(temp)" , kTestSend },
-  { "printarp", "print ARP Table(temp)" , kTestPrint },
+  { "i", "InitEthernet(temp)" , kTest },
+  { "s", "send ARP(temp)" , kTestSend },
+  { "p", "print ARP Table(temp)" , kTestPrint },
 };
 
 // TCB
@@ -1537,8 +1538,6 @@ static void kTest(const char* pcParameterBuffer)
     return;
   }
 
-  kSleep(100);
-
   if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
     (QWORD)kARP_Task, TASK_LOADBALANCINGID) == NULL)
   {
@@ -1550,11 +1549,17 @@ static void kTest(const char* pcParameterBuffer)
   {
     kPrintf("Create kIP_Task Fail\n");
   }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kICMP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kICMP_Task Fail\n");
+  }
 }
 
 static void kTestSend(const char* pcParameterBuffer)
 {
-  kARP_Send();
+  kICMP_SendEchoTest();
 }
 
 static void kTestPrint(const char* pcParameterBuffer)

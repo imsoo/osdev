@@ -104,6 +104,7 @@
     <ClCompile Include="02.Kernel64\Source\Console.c" />
     <ClCompile Include="02.Kernel64\Source\ConsoleShell.c" />
     <ClCompile Include="02.Kernel64\Source\Descriptor.c" />
+    <ClCompile Include="02.Kernel64\Source\DHCP.c" />
     <ClCompile Include="02.Kernel64\Source\DynamicMemory.c" />
     <ClCompile Include="02.Kernel64\Source\E1000.c" />
     <ClCompile Include="02.Kernel64\Source\EnglishFont.c" />
@@ -112,6 +113,7 @@
     <ClCompile Include="02.Kernel64\Source\Frame.c" />
     <ClCompile Include="02.Kernel64\Source\GUITask.c" />
     <ClCompile Include="02.Kernel64\Source\HardDisk.c" />
+    <ClCompile Include="02.Kernel64\Source\ICMP.c" />
     <ClCompile Include="02.Kernel64\Source\IP.c" />
     <ClCompile Include="02.Kernel64\Source\InterruptHandler.c" />
     <ClCompile Include="02.Kernel64\Source\IOAPIC.c" />
@@ -134,6 +136,7 @@
     <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
     <ClCompile Include="02.Kernel64\Source\SystemCall.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
+    <ClCompile Include="02.Kernel64\Source\UDP.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="02.Kernel64\Source\VBE.c" />
     <ClCompile Include="02.Kernel64\Source\WallPaper.c" />
@@ -184,6 +187,7 @@
     <ClInclude Include="02.Kernel64\Source\Console.h" />
     <ClInclude Include="02.Kernel64\Source\ConsoleShell.h" />
     <ClInclude Include="02.Kernel64\Source\Descriptor.h" />
+    <ClInclude Include="02.Kernel64\Source\DHCP.h" />
     <ClInclude Include="02.Kernel64\Source\DynamicMemory.h" />
     <ClInclude Include="02.Kernel64\Source\E1000.h" />
     <ClInclude Include="02.Kernel64\Source\Ethernet.h" />
@@ -192,6 +196,7 @@
     <ClInclude Include="02.Kernel64\Source\Frame.h" />
     <ClInclude Include="02.Kernel64\Source\GUITask.h" />
     <ClInclude Include="02.Kernel64\Source\HardDisk.h" />
+    <ClInclude Include="02.Kernel64\Source\ICMP.h" />
     <ClInclude Include="02.Kernel64\Source\IP.h" />
     <ClInclude Include="02.Kernel64\Source\InterruptHandler.h" />
     <ClInclude Include="02.Kernel64\Source\IOAPIC.h" />
@@ -216,6 +221,7 @@
     <ClInclude Include="02.Kernel64\Source\SystemCallList.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />
+    <ClInclude Include="02.Kernel64\Source\UDP.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />
     <ClInclude Include="02.Kernel64\Source\VBE.h" />
     <ClInclude Include="02.Kernel64\Source\Window.h" />

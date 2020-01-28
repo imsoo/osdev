@@ -68,10 +68,14 @@ BOOL kARP_Initialize(void);
 void kARPTable_Put(ARP_ENTRY* pstEntry);
 ARP_ENTRY* kARPTable_Get(DWORD dwKey);
 
+QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress);
+
+
 BOOL kARP_SideInPoint(FRAME stFrame);
 
 void kARPTable_Print(void);
-void kARP_Send(void);
+void kARP_Send(DWORD dwDestinationProtocolAddress);
+
 
 
 #endif // !__ARP_H__

@@ -23,21 +23,16 @@ void kEthernet_Task(void)
 {
   FRAME stFrame;
   ETHERNET_HEADER stEthernetHeader, *pstEthernetHeader;
+  QWORD qwDestinationHardwareAddress = 0;
 
   // 초기화
   if (kEthernet_Initialize() == FALSE)
     return;
 
   // Ethernet Frame
-  stEthernetHeader.vbSourceMACAddress[0] = 0x52;
-  stEthernetHeader.vbSourceMACAddress[1] = 0x54;
-  stEthernetHeader.vbSourceMACAddress[2] = 0x00;
-  stEthernetHeader.vbSourceMACAddress[3] = 0x12;
-  stEthernetHeader.vbSourceMACAddress[4] = 0x34;
-  stEthernetHeader.vbSourceMACAddress[5] = 0x56;
+  gs_stEthernetManager.pfGetAddress(stEthernetHeader.vbSourceMACAddress);
 
   kMemCpy(stEthernetHeader.vbDestinationMACAddress, gs_vbBroadCast, 6);
-  stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_ARP);
 
   while (1)
   {
@@ -49,21 +44,29 @@ void kEthernet_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_OUT:
+      kPrintf("Ethernet | Receive Frame | wType : %x\n", pstEthernetHeader->wType);
+
       pstEthernetHeader = (ETHERNET_HEADER*)stFrame.pbCur;
       stFrame.wLen -= sizeof(ETHERNET_HEADER);
       stFrame.pbCur += sizeof(ETHERNET_HEADER);
       if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_ARP) {
-
         gs_stEthernetManager.pfSideOut(stFrame);
       }
-      else 
+      else if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_IP) {
         gs_stEthernetManager.pfUp(stFrame);
+      }
+      else {
+        kPrintf("Ethernet | Unkown Packet | Type : %d\n", pstEthernetHeader->wType);
+      }
       break;
     case FRAME_IN:
+      kPrintf("Ethernet | Send Frame | bType : %x\n", stFrame.bType);
 
       switch (stFrame.bType)
       {
       case FRAME_ARP:
+        stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_ARP);
+
         kNumberToAddressArray(stEthernetHeader.vbDestinationMACAddress, stFrame.qwDestAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
         stFrame.wLen += sizeof(ETHERNET_HEADER);
         stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
@@ -71,6 +74,29 @@ void kEthernet_Task(void)
         gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
 
         kFreeFrame(&stFrame);
+        break;
+      case FRAME_IP:
+        stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_IP);
+
+        // ARP 테이블에 존재하지 않는 경우 
+        qwDestinationHardwareAddress = kARP_GetHardwareAddress(stFrame.qwDestAddress);
+        if (qwDestinationHardwareAddress == 0) {
+          // 큐에 삽입하여 재시도
+          kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame);
+        }
+        // 존재 하는 경우 전송
+        else {
+          kNumberToAddressArray(stEthernetHeader.vbDestinationMACAddress, qwDestinationHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+          stFrame.wLen += sizeof(ETHERNET_HEADER);
+          stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
+          kMemCpy(stFrame.pbCur, &stEthernetHeader, sizeof(ETHERNET_HEADER));
+          gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
+          kPrintFrame(&stFrame);
+
+          kFreeFrame(&stFrame);
+        }
+
+        break;
       default:
         break;
       }

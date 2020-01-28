@@ -12,6 +12,7 @@
 #define E1000_82577LM   0x10EA   // Device ID for Intel 82577LM
 
 #define ETHERNET_HEADER_TYPE_ARP 0x0806
+#define ETHERNET_HEADER_TYPE_IP  0x0800
 
 
 typedef enum kHandlerStatus

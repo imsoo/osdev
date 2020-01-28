@@ -26,9 +26,13 @@ void kARP_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_OUT:
+      kPrintf("ARP | Send ARP Packet\n");
+
       gs_stARPManager.pfSideOut(stFrame);
       break;
     case FRAME_IN:
+      kPrintf("ARP | Receive ARP Packet\n");
+
       pstARPHeader = stFrame.pbCur;
 
       // IPv4 인지 검사
@@ -154,6 +158,21 @@ ARP_ENTRY* kARPTable_Get(DWORD dwKey)
   return NULL;
 }
 
+QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
+{
+  ARP_ENTRY* pstEntry;
+
+  // ARP 테이블 검색
+  pstEntry = kARPTable_Get(dwProtocolAddress);
+  if (pstEntry != NULL) {
+    return pstEntry->qwHardwareAddress;
+  }
+
+  // 존재하지 않는 경우 ARP Request 전송
+  kARP_Send(dwProtocolAddress);
+  return 0;
+}
+
 BOOL kARP_SideInPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
@@ -205,7 +224,7 @@ void kARPTable_Print(void)
 
 }
 
-void kARP_Send(void)
+void kARP_Send(DWORD dwDestinationProtocolAddress)
 {
   int i;
   ARP_HEADER stARPPacket;
@@ -226,11 +245,7 @@ void kARP_Send(void)
   // QEMU Virtual Network Device : 10.0.2.15
   kMemCpy(stARPPacket.vbSenderProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
-  // QEMU DNS : 10.0.2.3
-  stARPPacket.vbTargetProtocolAddress[0] = 10;
-  stARPPacket.vbTargetProtocolAddress[1] = 0;
-  stARPPacket.vbTargetProtocolAddress[2] = 2;
-  stARPPacket.vbTargetProtocolAddress[3] = 3;
+  kNumberToAddressArray(stARPPacket.vbTargetProtocolAddress, dwDestinationProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
   kAllocateFrame(&stFrame);
   stFrame.wLen += sizeof(ARP_HEADER);
