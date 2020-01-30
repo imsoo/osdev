@@ -91,6 +91,7 @@ BOOL kE1000_Receive(FRAME* pstFrame)
     wReceiveLen = gs_stE1000Manager.vpstRxDescriptor[gs_stE1000Manager.wRxTail]->wLength;
 
     kMemCpy(pstFrame->pbBuf, pbReceiveBuf, wReceiveLen);
+    pstFrame->pbCur = pstFrame->pbBuf;
     pstFrame->wLen = wReceiveLen;
 
     gs_stE1000Manager.vpstRxDescriptor[gs_stE1000Manager.wRxTail]->bStatus = 0;

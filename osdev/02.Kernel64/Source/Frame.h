@@ -3,7 +3,7 @@
 
 #include "Types.h"
 
-#define FRAME_MAX_SIZE          1520
+#define FRAME_MAX_SIZE          1514
 #define FRAME_QUEUE_MAX_COUNT   100
 
 typedef BOOL(*UpFunction)(FRAME);
@@ -39,10 +39,18 @@ typedef struct kFrame
 
 // function
 
-BOOL kAllocateFrame(FRAME *pstFrame);
-void kFreeFrame(FRAME *pstFrame);
+BOOL kAllocateFrame(FRAME* pstFrame);
+BOOL kAllocateBiggerFrame(FRAME* pstFrame);
+void kFreeFrame(FRAME* pstFrame);
+
+void kEncapuslationFrame(FRAME* pstFrame, BYTE* pbHeader, DWORD dwHeaderSize,
+  BYTE* pbPayload, DWORD dwPayloadSize);
+
+void kDecapuslationFrame(FRAME* pstFrame, BYTE** ppbHeader, DWORD dwHeaderSize,
+  BYTE** ppbPayload);
 
 void kPrintFrame(FRAME* pstFrame);
+
 
 BOOL kStub_UpDirectionPoint(FRAME stFrame);
 BOOL kStub_DownDirectionPoint(FRAME stFrame);

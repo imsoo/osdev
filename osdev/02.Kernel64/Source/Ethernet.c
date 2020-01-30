@@ -23,6 +23,7 @@ void kEthernet_Task(void)
 {
   FRAME stFrame;
   ETHERNET_HEADER stEthernetHeader, *pstEthernetHeader;
+  BYTE* pbEthernetPayload;
   QWORD qwDestinationHardwareAddress = 0;
 
   // 초기화
@@ -44,11 +45,11 @@ void kEthernet_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_OUT:
+      kDecapuslationFrame(&stFrame, &pstEthernetHeader, sizeof(ETHERNET_HEADER), &pbEthernetPayload);
+
       kPrintf("Ethernet | Receive Frame | wType : %x\n", pstEthernetHeader->wType);
 
-      pstEthernetHeader = (ETHERNET_HEADER*)stFrame.pbCur;
-      stFrame.wLen -= sizeof(ETHERNET_HEADER);
-      stFrame.pbCur += sizeof(ETHERNET_HEADER);
+
       if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_ARP) {
         gs_stEthernetManager.pfSideOut(stFrame);
       }
@@ -68,9 +69,7 @@ void kEthernet_Task(void)
         stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_ARP);
 
         kNumberToAddressArray(stEthernetHeader.vbDestinationMACAddress, stFrame.qwDestAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-        stFrame.wLen += sizeof(ETHERNET_HEADER);
-        stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
-        kMemCpy(stFrame.pbCur, &stEthernetHeader, sizeof(ETHERNET_HEADER));
+        kEncapuslationFrame(&stFrame, &stEthernetHeader, sizeof(ETHERNET_HEADER), NULL, 0);
         gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
 
         kFreeFrame(&stFrame);
@@ -87,11 +86,10 @@ void kEthernet_Task(void)
         // 존재 하는 경우 전송
         else {
           kNumberToAddressArray(stEthernetHeader.vbDestinationMACAddress, qwDestinationHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-          stFrame.wLen += sizeof(ETHERNET_HEADER);
-          stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
-          kMemCpy(stFrame.pbCur, &stEthernetHeader, sizeof(ETHERNET_HEADER));
+
+          // 전송
+          kEncapuslationFrame(&stFrame, &stEthernetHeader, sizeof(ETHERNET_HEADER), NULL, 0);
           gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
-          kPrintFrame(&stFrame);
 
           kFreeFrame(&stFrame);
         }

@@ -66,13 +66,13 @@ void kICMP_SendEchoTest(void)
 {
   ICMP_HEADER stICMPHeader = { 0, };
   FRAME stFrame;
-  WORD wDataLen = 32;
+  WORD wDataLen = 1000;
   BYTE vbTestData[32] = { 
   'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
   'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
   'u', 'v', 'w', 'a', 'b', 'c', 'd', 'e', 'f', 'g',
   'h', 'i'};
-  BYTE vbTestAddress[4] = { 192, 168, 10, 1 };
+  BYTE vbTestAddress[4] = { 10, 0, 2, 2 };
 
   stICMPHeader.bType = ICMP_TYPE_ECHO;
   stICMPHeader.bCode = ICMP_CODE_DEFAULT;

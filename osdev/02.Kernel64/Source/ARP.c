@@ -33,7 +33,7 @@ void kARP_Task(void)
     case FRAME_IN:
       kPrintf("ARP | Receive ARP Packet\n");
 
-      pstARPHeader = stFrame.pbCur;
+      kDecapuslationFrame(&stFrame, &pstARPHeader, sizeof(ARPMANAGER), NULL);
 
       // IPv4 인지 검사
       if (ntohs(pstARPHeader->wProtocolType) != ARP_PROTOCOLTYPE_IPV4)
@@ -185,7 +185,7 @@ void kARPTable_Print(void)
 {
   int i, j;
   LIST stList;
-  ARP_ENTRY *stEntry;
+  ARP_ENTRY* pstEntry;
   BYTE vbProtocolAddress[ARP_PROTOCOLADDRESSLENGTH_IPV4];
   BYTE vbHardwareAddress[ARP_HARDWAREADDRESSLENGTH_ETHERNET];
   static BYTE* s_vpbTypeString[2] = { "Static", "Dynamic" };
@@ -195,12 +195,12 @@ void kARPTable_Print(void)
     stList = gs_stARPManager.stARPTable.vstEntryList[i];
 
     if (kGetListCount(&stList) > 0) {
-      stEntry = kGetHeaderFromList(&stList);
+      pstEntry = kGetHeaderFromList(&stList);
 
       do
       {
-        kNumberToAddressArray(vbProtocolAddress, stEntry->stEntryLink.qwID, ARP_PROTOCOLADDRESSLENGTH_IPV4);
-        kNumberToAddressArray(vbHardwareAddress, stEntry->qwHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+        kNumberToAddressArray(vbProtocolAddress, pstEntry->stEntryLink.qwID, ARP_PROTOCOLADDRESSLENGTH_IPV4);
+        kNumberToAddressArray(vbHardwareAddress, pstEntry->qwHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
 
         for (j = 0; j < ARP_PROTOCOLADDRESSLENGTH_IPV4; j++) {
           if (j != 0)
@@ -216,9 +216,9 @@ void kARPTable_Print(void)
         }
         kPrintf(" | ");
 
-        kPrintf("%s\n", s_vpbTypeString[stEntry->bType]);
-        stEntry = kGetNextFromList(&stList, stEntry);
-      } while (stEntry != NULL);
+        kPrintf("%s\n", s_vpbTypeString[pstEntry->bType]);
+        pstEntry = kGetNextFromList(&stList, pstEntry);
+      } while (pstEntry != NULL);
     }
   }
 
@@ -248,12 +248,11 @@ void kARP_Send(DWORD dwDestinationProtocolAddress)
   kNumberToAddressArray(stARPPacket.vbTargetProtocolAddress, dwDestinationProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
   kAllocateFrame(&stFrame);
-  stFrame.wLen += sizeof(ARP_HEADER);
-  stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
   stFrame.bType = FRAME_ARP;
   stFrame.qwDestAddress = kAddressArrayToNumber(stARPPacket.vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
   stFrame.eDirection = FRAME_OUT;
-  kMemCpy(stFrame.pbCur, &stARPPacket, sizeof(ARP_HEADER));
+
+  kEncapuslationFrame(&stFrame, &stARPPacket, sizeof(ARP_HEADER), NULL, 0);
 
   kPutQueue(&(gs_stARPManager.stFrameQueue), &stFrame);
 }
