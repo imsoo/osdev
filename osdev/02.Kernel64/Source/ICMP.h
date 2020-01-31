@@ -3,6 +3,7 @@
 
 #include "Frame.h"
 #include "Queue.h"
+#include "Synchronization.h"
 
 #define ICMP_TYPE_ECHOREPLY               0x00
 #define ICMP_TYPE_DESTINATIONUNREACHABLE  0x03
@@ -22,6 +23,9 @@
 
 typedef struct kICMPManager
 {
+  // µø±‚»≠ ∞¥√º
+  MUTEX stLock;
+
   QUEUE stFrameQueue;
   FRAME* pstFrameBuffer;
 
@@ -54,5 +58,8 @@ BOOL kICMP_SideInPoint(FRAME stFrame);
 
 void kICMP_SendEchoTest(void);
 WORD kICMP_CalcChecksum(ICMP_HEADER* pstHeader, void* pvData, WORD wDataLen);
+
+BOOL kICMP_PutFrameToFrameQueue(const FRAME* pstFrame);
+BOOL kICMP_GetFrameFromFrameQueue(FRAME* pstFrame);
 
 #endif // !__ICMP_H__

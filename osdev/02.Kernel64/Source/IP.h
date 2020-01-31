@@ -5,9 +5,9 @@
 #include "Queue.h"
 #include "List.h"
 #include "Frame.h"
+#include "Synchronization.h"
 
-
-#define IP_MAXIMUMTRANSMITUNIT    800
+#define IP_MAXIMUMTRANSMITUNIT    1500
 
 #define IP_INETERNETHEADERLENGTH_DEFAULT  5
 
@@ -55,6 +55,9 @@ typedef struct kIPReassemblyBuffer
 
 typedef struct kIPManager
 {
+  // µø±‚»≠ ∞¥√º
+  MUTEX stLock;
+
   LIST stReassemblyBufferList;
 
   QUEUE stFrameQueue;
@@ -89,5 +92,7 @@ void kIP_FillReassemblyBufferBitmap(IPREASSEMBLYBUFFER* pstBuffer, DWORD dwFragm
 
 WORD kIP_CalcChecksum(IP_HEADER* pstHeader);
 
+BOOL kIP_PutFrameToFrameQueue(const FRAME* pstFrame);
+BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame);
 
 #endif // !__IP_H__

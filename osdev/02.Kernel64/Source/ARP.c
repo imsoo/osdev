@@ -18,7 +18,7 @@ void kARP_Task(void)
 
   while (1)
   {
-    if (kGetQueue(&(gs_stARPManager.stFrameQueue), &stFrame) == FALSE) {
+    if (kARP_GetFrameFromFrameQueue(&stFrame) == FALSE) {
       kSleep(0);
       continue;
     }
@@ -76,7 +76,7 @@ void kARP_Task(void)
 
             stFrame.qwDestAddress = kAddressArrayToNumber(pstARPHeader->vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
             stFrame.eDirection = FRAME_OUT;
-            kPutQueue(&(gs_stARPManager.stFrameQueue), &stFrame);
+            kARP_PutFrameToFrameQueue(&stFrame);
           }
         }
       }
@@ -105,6 +105,9 @@ BOOL kARP_Initialize(void)
   gs_stARPManager.vbIPAddress[1] = 0;
   gs_stARPManager.vbIPAddress[2] = 2;
   gs_stARPManager.vbIPAddress[3] = 15;
+
+  // 뮤텍스 초기화
+  kInitializeMutex(&(gs_stARPManager.stLock));
 
   // Allocate Frame Queue
   gs_stARPManager.pstFrameBuffer = (FRAME*)kAllocateMemory(FRAME_QUEUE_MAX_COUNT * sizeof(FRAME));
@@ -176,7 +179,7 @@ QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
 BOOL kARP_SideInPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
-  if (kPutQueue(&(gs_stARPManager.stFrameQueue), &stFrame) == FALSE)
+  if (kARP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
 }
@@ -236,15 +239,15 @@ void kARP_Send(DWORD dwDestinationProtocolAddress)
   stARPPacket.bProtocolAddressLength = ARP_PROTOCOLADDRESSLENGTH_IPV4;
   stARPPacket.wOperation = htons(ARP_OPERATION_REQUEST);
 
+  // 하드웨어 주소 설정
   kMemCpy(stARPPacket.vbSenderHardwareAddress, gs_stARPManager.vbMACAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-
   for (i = 0; i < 6; i++) {
     stARPPacket.vbTargetHardwareAddress[i] = 0xFF;
   }
 
+  // 프로토콜 주소 설정
   // QEMU Virtual Network Device : 10.0.2.15
   kMemCpy(stARPPacket.vbSenderProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
-
   kNumberToAddressArray(stARPPacket.vbTargetProtocolAddress, dwDestinationProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
   kAllocateFrame(&stFrame);
@@ -254,5 +257,36 @@ void kARP_Send(DWORD dwDestinationProtocolAddress)
 
   kEncapuslationFrame(&stFrame, &stARPPacket, sizeof(ARP_HEADER), NULL, 0);
 
-  kPutQueue(&(gs_stARPManager.stFrameQueue), &stFrame);
+  kARP_PutFrameToFrameQueue(&stFrame);
+}
+
+BOOL kARP_PutFrameToFrameQueue(const FRAME* pstFrame)
+{
+  BOOL bResult;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stARPManager.stLock));
+
+  // Put into FrameQueue
+  bResult = kPutQueue(&(gs_stARPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stARPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+BOOL kARP_GetFrameFromFrameQueue(FRAME* pstFrame)
+{
+  BOOL bResult;
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stARPManager.stLock));
+
+  // Get from FrameQueue
+  bResult = kGetQueue(&(gs_stARPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stARPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
 }

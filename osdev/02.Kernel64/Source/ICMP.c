@@ -16,7 +16,7 @@ void kICMP_Task(void)
 
   while (1)
   {
-    if (kGetQueue(&(gs_stICMPManager.stFrameQueue), &stFrame) == FALSE) {
+    if (kICMP_GetFrameFromFrameQueue(&stFrame) == FALSE) {
       kSleep(0);
       continue;
     }
@@ -38,6 +38,9 @@ void kICMP_Task(void)
 
 BOOL kICMP_Initialize(void)
 {
+  // 뮤텍스 초기화
+  kInitializeMutex(&(gs_stICMPManager.stLock));
+
   // Allocate Frame Queue
   gs_stICMPManager.pstFrameBuffer = (FRAME*)kAllocateMemory(FRAME_QUEUE_MAX_COUNT * sizeof(FRAME));
   if (gs_stICMPManager.pstFrameBuffer == NULL) {
@@ -57,7 +60,7 @@ BOOL kICMP_Initialize(void)
 BOOL kICMP_SideInPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
-  if (kPutQueue(&(gs_stICMPManager.stFrameQueue), &stFrame) == FALSE)
+  if (kICMP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
 }
@@ -98,7 +101,7 @@ void kICMP_SendEchoTest(void)
   kMemCpy(stFrame.pbCur + sizeof(ICMP_HEADER), &vbTestData, wDataLen);
 
   stFrame.qwDestAddress = kAddressArrayToNumber(vbTestAddress, 4);
-  kPutQueue(&(gs_stICMPManager.stFrameQueue), &stFrame);
+  kICMP_PutFrameToFrameQueue(&stFrame);
 }
 
 WORD kICMP_CalcChecksum(ICMP_HEADER* pstHeader, void* pvData, WORD wDataLen)
@@ -128,4 +131,35 @@ WORD kICMP_CalcChecksum(ICMP_HEADER* pstHeader, void* pvData, WORD wDataLen)
   }
 
   return ~(dwSum & 0xFFFF) & 0xFFFF;
+}
+
+BOOL kICMP_PutFrameToFrameQueue(const FRAME* pstFrame)
+{
+  BOOL bResult;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stICMPManager.stLock));
+
+  // Put into FrameQueue
+  bResult = kPutQueue(&(gs_stICMPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stICMPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+BOOL kICMP_GetFrameFromFrameQueue(FRAME* pstFrame)
+{
+  BOOL bResult;
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stICMPManager.stLock));
+
+  // Get from FrameQueue
+  bResult = kGetQueue(&(gs_stICMPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stICMPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
 }

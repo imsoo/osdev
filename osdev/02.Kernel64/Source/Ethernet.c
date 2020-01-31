@@ -14,7 +14,7 @@ static BYTE gs_vbBroadCast[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 BOOL kEthernet_DownDirectionPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
-  if (kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame) == FALSE)
+  if (kEthernet_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
 }
@@ -33,11 +33,9 @@ void kEthernet_Task(void)
   // Ethernet Frame
   gs_stEthernetManager.pfGetAddress(stEthernetHeader.vbSourceMACAddress);
 
-  kMemCpy(stEthernetHeader.vbDestinationMACAddress, gs_vbBroadCast, 6);
-
   while (1)
   {
-    if (kGetQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame) == FALSE) {
+    if (kEthernet_GetFrameFromFrameQueue(&stFrame) == FALSE) {
       kSleep(0);
       continue;
     }
@@ -81,7 +79,7 @@ void kEthernet_Task(void)
         qwDestinationHardwareAddress = kARP_GetHardwareAddress(stFrame.qwDestAddress);
         if (qwDestinationHardwareAddress == 0) {
           // 큐에 삽입하여 재시도
-          kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame);
+          kEthernet_PutFrameToFrameQueue(&stFrame);
         }
         // 존재 하는 경우 전송
         else {
@@ -119,6 +117,9 @@ BOOL kEthernet_Initialize(void)
 
   QWORD qwIOAddress;
   QWORD qwMMIOAddress;
+
+  // 스핀락 초기화
+  kInitializeSpinLock(&(gs_stEthernetManager.stSpinLock));
 
   // Allocate Frame Queue
   gs_stEthernetManager.pstFrameBuffer= (FRAME*)kAllocateMemory(FRAME_QUEUE_MAX_COUNT * sizeof(FRAME));
@@ -232,11 +233,42 @@ void kEthernet_Handler(void)
     if (kAllocateFrame(&stFrame) == TRUE) {
       gs_stEthernetManager.pfRecevie(&stFrame);
       stFrame.eDirection = FRAME_OUT;
-      kPutQueue(&(gs_stEthernetManager.stFrameQueue), &stFrame);
+      kEthernet_PutFrameToFrameQueue(&stFrame);
     }
     break;
   case HANDLER_UNKNOWN:
     // do nothing
     break;
   }
+}
+
+BOOL kEthernet_PutFrameToFrameQueue(const FRAME* pstFrame)
+{
+  BOOL bResult;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLockForSpinLock(&(gs_stEthernetManager.stSpinLock));
+
+  // Put into FrameQueue
+  bResult = kPutQueue(&(gs_stEthernetManager.stFrameQueue), pstFrame);
+
+  kUnlockForSpinLock(&(gs_stEthernetManager.stSpinLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+BOOL kEthernet_GetFrameFromFrameQueue(FRAME* pstFrame)
+{
+  BOOL bResult;
+  // --- CRITCAL SECTION BEGIN ---
+  kLockForSpinLock(&(gs_stEthernetManager.stSpinLock));
+
+  // Get from FrameQueue
+  bResult = kGetQueue(&(gs_stEthernetManager.stFrameQueue), pstFrame);
+
+  kUnlockForSpinLock(&(gs_stEthernetManager.stSpinLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
 }

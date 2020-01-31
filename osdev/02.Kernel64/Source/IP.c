@@ -32,7 +32,7 @@ void kIP_Task(void)
     kIP_CheckReassemblyBufferList();
 
     // 큐 확인
-    if (kGetQueue(&(gs_stIPManager.stFrameQueue), &stFrame) == FALSE) {
+    if (kIP_GetFrameFromFrameQueue(&stFrame) == FALSE) {
       kSleep(0);
       continue;
     }
@@ -98,13 +98,13 @@ void kIP_Task(void)
         stIPHeader.wTotalLength = htons(stFrame.wLen);
         stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
         kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
-        //stIPHeader.wHeaderChecksum = kIP_CalcChecksum(&stIPHeader);
+        stIPHeader.wHeaderChecksum = kIP_CalcChecksum(&stIPHeader);
         kMemCpy(stFrame.pbCur, &stIPHeader, sizeof(IP_HEADER));
 
         stFrame.bType = FRAME_IP;
         stFrame.qwDestAddress = kAddressArrayToNumber(gs_stIPManager.vbGatewayAddress, 4);
 
-        kPutQueue(&(gs_stIPManager.stFrameQueue), &stFrame);
+        kIP_PutFrameToFrameQueue(&stFrame);
         break;
 
       default:
@@ -243,7 +243,7 @@ void kIP_CheckReassemblyBufferList(void)
           
           // 상위 레이어로 전송하기 위해 큐에 삽입
           stFrame.eDirection = FRAME_OUT;
-          kPutQueue(&(gs_stIPManager.stFrameQueue), &stFrame);
+          kIP_PutFrameToFrameQueue(&stFrame);
 
           // 자원 해제
           bReleaseFlag = TRUE;
@@ -488,7 +488,7 @@ BYTE kIP_Reassembly(FRAME* stFrame)
 BOOL kIP_UpDirectionPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_OUT;
-  if (kPutQueue(&(gs_stIPManager.stFrameQueue), &stFrame) == FALSE)
+  if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
 }
@@ -496,13 +496,16 @@ BOOL kIP_UpDirectionPoint(FRAME stFrame)
 BOOL kIP_SideInPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
-  if (kPutQueue(&(gs_stIPManager.stFrameQueue), &stFrame) == FALSE)
+  if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
 }
 
 BOOL kIP_Initialize(void)
 {
+  // 뮤텍스 초기화
+  kInitializeMutex(&(gs_stIPManager.stLock));
+
   // Allocate Frame Queue
   gs_stIPManager.pstFrameBuffer = (FRAME*)kAllocateMemory(FRAME_QUEUE_MAX_COUNT * sizeof(FRAME));
   if (gs_stIPManager.pstFrameBuffer == NULL) {
@@ -555,4 +558,35 @@ WORD kIP_CalcChecksum(IP_HEADER* pstHeader)
   }
 
   return ~(dwSum & 0xFFFF) & 0xFFFF;
+}
+
+BOOL kIP_PutFrameToFrameQueue(const FRAME* pstFrame)
+{
+  BOOL bResult;
+
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stIPManager.stLock));
+
+  // Put into FrameQueue
+  bResult = kPutQueue(&(gs_stIPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stIPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
+}
+
+BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame)
+{
+  BOOL bResult;
+  // --- CRITCAL SECTION BEGIN ---
+  kLock(&(gs_stIPManager.stLock));
+
+  // Get from FrameQueue
+  bResult = kGetQueue(&(gs_stIPManager.stFrameQueue), pstFrame);
+
+  kUnlock(&(gs_stIPManager.stLock));
+  // --- CRITCAL SECTION END ---
+
+  return bResult;
 }

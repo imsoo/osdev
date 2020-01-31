@@ -35,6 +35,9 @@ typedef void(*LinkUpFunction)(void);
 
 typedef struct kEthernetManager
 {
+  // µø±‚»≠ ∞¥√º
+  SPINLOCK stSpinLock;
+  
   InitFunction pfInit;
   SendFunction pfSend;
   ReceiveFunction pfRecevie;
@@ -65,5 +68,10 @@ BOOL kEthernet_SideDirectionPoint(FRAME stFrame);
 BOOL kEthernet_Initialize(void);
 BOOL kEthernet_SetDriver(WORD wVendor, WORD wDevice);
 void kEthernet_Handler(void);
+
+BOOL kEthernet_PutFrameToFrameQueue(const FRAME* pstFrame);
+BOOL kEthernet_GetFrameFromFrameQueue(FRAME* pstFrame);
+
+
 
 #endif // !__ETHERNET_H__
