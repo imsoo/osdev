@@ -48,9 +48,9 @@ void kARP_Task(void)
       }
       // 새로운 정보인 경우
       else {
-        kPrintf("[ARP] New \n");
         // 목적지 프로토콜 주소를 비교
         if (kMemCmp(pstARPHeader->vbTargetProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4) == 0) {
+          kPrintf("ARP | New Entry\n");
           // 새 테이블 엔트리 삽입
           pstEntry = (ARP_ENTRY*)kAllocateMemory(sizeof(ARP_ENTRY));
           if (pstEntry == NULL) {

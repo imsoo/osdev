@@ -20,7 +20,7 @@
 
 #define IP_PROTOCOL_ICMP  0x01
 #define IP_PROTOCOL_TCP   0x06
-#define IP_PROTOCOL_UDP   0x17
+#define IP_PROTOCOL_UDP   0x11
 
 #define IP_TIMER_DEFAULT_SECOND 15
 

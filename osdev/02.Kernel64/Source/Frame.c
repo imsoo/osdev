@@ -84,7 +84,6 @@ void kPrintFrame(FRAME* pstFrame)
 BOOL kStub_UpDirectionPoint(FRAME stFrame)
 {
   kPrintf("kStub_UpDirectionPoint\n");
-  kPrintFrame(&stFrame);
   kFreeFrame(&stFrame);
 }
 

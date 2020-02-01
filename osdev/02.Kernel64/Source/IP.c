@@ -2,6 +2,7 @@
 #include "DynamicMemory.h"
 #include "Utility.h"
 #include "Ethernet.h"
+#include "ICMP.h"
 
 static IPMANAGER gs_stIPManager = { 0, };
 
@@ -67,6 +68,10 @@ void kIP_Task(void)
           gs_stIPManager.pfUp(stFrame);
           break;
         default:
+          // ICMP : Destination Unreachable Message | protocol unreachable 전송
+          kICMP_SendMessage(kAddressArrayToNumber(pstIPHeader->vbSourceIPAddress, 4),
+            ICMP_TYPE_DESTINATIONUNREACHABLE, ICMP_CODE_PROTOCOLUNREACHABLE, pstIPHeader, pbIPPayload);
+          kFreeFrame(&stFrame);
           break;
         }
       }
@@ -94,16 +99,16 @@ void kIP_Task(void)
         // IP 헤더 추가
         stIPHeader.wIdentification = htons(gs_stIPManager.wIdentification++);
         stIPHeader.bProtocol = IP_PROTOCOL_ICMP;
-        stFrame.wLen += sizeof(IP_HEADER);
-        stIPHeader.wTotalLength = htons(stFrame.wLen);
-        stFrame.pbCur = stFrame.pbBuf + FRAME_MAX_SIZE - stFrame.wLen;
+        stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
         kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
         stIPHeader.wHeaderChecksum = kIP_CalcChecksum(&stIPHeader);
-        kMemCpy(stFrame.pbCur, &stIPHeader, sizeof(IP_HEADER));
 
+        // 캡슐화
+        kEncapuslationFrame(&stFrame, &stIPHeader, sizeof(IP_HEADER), NULL, 0);
+
+        // 하위 레이어로 전송
         stFrame.bType = FRAME_IP;
         stFrame.qwDestAddress = kAddressArrayToNumber(gs_stIPManager.vbGatewayAddress, 4);
-
         kIP_PutFrameToFrameQueue(&stFrame);
         break;
 
@@ -253,6 +258,10 @@ void kIP_CheckReassemblyBufferList(void)
       // TTL 값, 타이머 만료 시 버퍼 자원 해제
       if ((dwElapsedTime > dwReaminTime) || (dwElapsedTime > IP_TIMER_DEFAULT_SECOND * 1000)) {
         
+        // ICMP : Time Exceeded Message | fragment reassembly time exceeded 전송
+        kICMP_SendMessage(kAddressArrayToNumber(pstBuffer->stIPHeader.vbSourceIPAddress, 4),
+          ICMP_TYPE_TIMEEXCEEDED, ICMP_CODE_FRAGMENTREASSEMBLYTIMEEXCEEDED, &(pstBuffer->stIPHeader), &(pstBuffer->pbDataBuffer));
+
         // 자원 해제
         bReleaseFlag = TRUE;
       }
@@ -534,7 +543,7 @@ BOOL kIP_Initialize(void)
   gs_stIPManager.vbGatewayAddress[0] = 10;
   gs_stIPManager.vbGatewayAddress[1] = 0;
   gs_stIPManager.vbGatewayAddress[2] = 2;
-  gs_stIPManager.vbGatewayAddress[3] = 2;
+  gs_stIPManager.vbGatewayAddress[3] = 3;
 
   return TRUE;
 }

@@ -1559,7 +1559,7 @@ static void kTest(const char* pcParameterBuffer)
 
 static void kTestSend(const char* pcParameterBuffer)
 {
-  kICMP_SendEchoTest();
+  kICMP_SendEcho(0xFFFFFFFF);
 }
 
 static void kTestPrint(const char* pcParameterBuffer)
