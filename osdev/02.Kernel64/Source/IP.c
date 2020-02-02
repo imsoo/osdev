@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include "Ethernet.h"
 #include "ICMP.h"
+#include "UDP.h"
 
 static IPMANAGER gs_stIPManager = { 0, };
 
@@ -51,6 +52,8 @@ void kIP_Task(void)
         break;
       }
 
+      // TODO : 필요 시 IP 헤더 체크섬 확인
+
       // MF 와 Fragment Offset이 0이 아닌 경우 단편화 패킷
       // 재조립 과정을 수행 함
       if (ntohs(stIPHeader.wFlagsAndFragmentOffset) != 0) {
@@ -61,11 +64,12 @@ void kIP_Task(void)
         switch (pstIPHeader->bProtocol)
         {
         case IP_PROTOCOL_ICMP:
-          gs_stIPManager.pfSideOut(stFrame);
+          gs_stIPManager.pfSideOutICMP(stFrame);
           break;
         case IP_PROTOCOL_TCP:
+          break;
         case IP_PROTOCOL_UDP:
-          gs_stIPManager.pfUp(stFrame);
+          gs_stIPManager.pfUpUDP(stFrame);
           break;
         default:
           // ICMP : Destination Unreachable Message | protocol unreachable 전송
@@ -101,7 +105,7 @@ void kIP_Task(void)
         stIPHeader.bProtocol = IP_PROTOCOL_ICMP;
         stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
         kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
-        stIPHeader.wHeaderChecksum = kIP_CalcChecksum(&stIPHeader);
+        stIPHeader.wHeaderChecksum = htons(kIP_CalcChecksum(&stIPHeader));
 
         // 캡슐화
         kEncapuslationFrame(&stFrame, &stIPHeader, sizeof(IP_HEADER), NULL, 0);
@@ -112,6 +116,23 @@ void kIP_Task(void)
         kIP_PutFrameToFrameQueue(&stFrame);
         break;
 
+      case FRAME_UDP:
+        // IP 헤더 추가
+        stIPHeader.wIdentification = htons(gs_stIPManager.wIdentification++);
+        stIPHeader.bProtocol = IP_PROTOCOL_UDP;
+        stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
+        kNumberToAddressArray(stIPHeader.vbSourceIPAddress, stFrame.qwDestAddress >> 32, 4);
+        kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
+        stIPHeader.wHeaderChecksum = htons(kIP_CalcChecksum(&stIPHeader));
+
+        // 캡슐화
+        kEncapuslationFrame(&stFrame, &stIPHeader, sizeof(IP_HEADER), NULL, 0);
+
+        // 하위 레이어로 전송
+        stFrame.bType = FRAME_IP;
+        kIP_PutFrameToFrameQueue(&stFrame);
+
+        break;
       default:
         break;
       }
@@ -502,6 +523,14 @@ BOOL kIP_UpDirectionPoint(FRAME stFrame)
   return TRUE;
 }
 
+BOOL kIP_DownDirectionPoint(FRAME stFrame)
+{
+  stFrame.eDirection = FRAME_IN;
+  if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
+    return FALSE;
+  return TRUE;
+}
+
 BOOL kIP_SideInPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
@@ -530,7 +559,8 @@ BOOL kIP_Initialize(void)
 
   // 레이어 설정
   gs_stIPManager.pfDown = kEthernet_DownDirectionPoint;
-  gs_stIPManager.pfUp = kStub_UpDirectionPoint;
+  gs_stIPManager.pfUpUDP = kUDP_UpDirectionPoint;
+  gs_stIPManager.pfSideOutICMP = kICMP_SideInPoint;
 
   // 임시
   // QEMU Virtual Network Device : 10.0.2.15
@@ -543,7 +573,7 @@ BOOL kIP_Initialize(void)
   gs_stIPManager.vbGatewayAddress[0] = 10;
   gs_stIPManager.vbGatewayAddress[1] = 0;
   gs_stIPManager.vbGatewayAddress[2] = 2;
-  gs_stIPManager.vbGatewayAddress[3] = 3;
+  gs_stIPManager.vbGatewayAddress[3] = 2;
 
   return TRUE;
 }
@@ -598,4 +628,9 @@ BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame)
   // --- CRITCAL SECTION END ---
 
   return bResult;
+}
+
+BOOL kIP_GetIPAddress(BYTE* pbAddress)
+{
+  kMemCpy(pbAddress, gs_stIPManager.vbIPAddress, 4);
 }

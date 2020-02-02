@@ -8,6 +8,13 @@ QWORD kGetTickCount(void) {
   return g_qwTickCount;
 }
 
+static volatile QWORD gs_qwRandomValue = 0;
+QWORD kRandom(void)
+{
+  gs_qwRandomValue = (gs_qwRandomValue * 412153 + 5571031) >> 16;
+  return gs_qwRandomValue;
+}
+
 // wait millisecond
 void kSleep(QWORD qwMillisecond)
 {

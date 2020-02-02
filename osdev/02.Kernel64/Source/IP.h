@@ -63,9 +63,9 @@ typedef struct kIPManager
   QUEUE stFrameQueue;
   FRAME* pstFrameBuffer;
 
-  UpFunction pfUp;
+  UpFunction pfUpUDP;
   DownFunction pfDown;
-  SideOutFunction pfSideOut;
+  SideOutFunction pfSideOutICMP;
 
   BYTE vbIPAddress[4];
   BYTE vbGatewayAddress[4];
@@ -79,6 +79,7 @@ void kIP_Task(void);
 BOOL kIP_Initialize(void);
 
 BOOL kIP_UpDirectionPoint(FRAME stFrame);
+BOOL kIP_DownDirectionPoint(FRAME stFrame);
 BOOL kIP_SideInPoint(FRAME stFrame);
 
 BYTE kIP_Fragmentation(FRAME* stOriginalFrame);
@@ -94,5 +95,7 @@ WORD kIP_CalcChecksum(IP_HEADER* pstHeader);
 
 BOOL kIP_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame);
+BOOL kIP_GetIPAddress(BYTE* pbAddress);
+
 
 #endif // !__IP_H__

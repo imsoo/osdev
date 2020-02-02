@@ -72,7 +72,7 @@ void kPrintFrame(FRAME* pstFrame)
 
   pbBuf = pstFrame->pbCur;
 
-  for (i = 0; i < pstFrame->wLen; i++) {
+  for (i = 0; i < 40; i++) {
     kPrintf("%x\t", pbBuf[i]);
 
     if (i % 8 == 7)

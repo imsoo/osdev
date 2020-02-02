@@ -17,6 +17,7 @@
 extern volatile QWORD g_qwTickCount;
 
 QWORD kGetTickCount(void);
+QWORD kRandom(void);
 void kSleep(QWORD qwMillisecond);
 
 void kMemSet(void* pvDestination, BYTE bData, int iSize);

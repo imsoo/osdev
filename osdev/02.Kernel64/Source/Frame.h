@@ -20,7 +20,10 @@ typedef enum kFrameType
 {
   FRAME_ARP = 0,
   FRAME_IP = 1,
-  FRAME_ICMP = 2
+  FRAME_ICMP = 2,
+  FRAME_UDP = 3,
+  FRAME_TCP = 4,
+  FRAME_DHCP = 5
 } FRAME_TYPE;
 
 #pragma pack(push, 1)
@@ -32,6 +35,7 @@ typedef struct kFrame
   WORD  wLen;
   FRAME_TYPE bType;
   QWORD qwDestAddress;
+  DWORD dwDestPort;
   FRAME_DIRECTION eDirection;
 } FRAME;
 

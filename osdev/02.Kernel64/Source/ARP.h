@@ -54,9 +54,6 @@ typedef struct kARPManager
   // µø±‚»≠ ∞¥√º
   MUTEX stLock;
 
-  BYTE vbMACAddress[6];
-  BYTE vbIPAddress[4];
-
   ARP_TABLE stARPTable;
   
   QUEUE stFrameQueue;
@@ -77,7 +74,7 @@ QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress);
 BOOL kARP_SideInPoint(FRAME stFrame);
 
 void kARPTable_Print(void);
-void kARP_Send(DWORD dwDestinationProtocolAddress);
+void kARP_Send(DWORD dwDestinationProtocolAddress, DWORD dwSourceProtocolAddress);
 
 BOOL kARP_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kARP_GetFrameFromFrameQueue(FRAME* pstFrame);

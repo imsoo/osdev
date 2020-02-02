@@ -272,3 +272,8 @@ BOOL kEthernet_GetFrameFromFrameQueue(FRAME* pstFrame)
 
   return bResult;
 }
+
+BOOL kEthernet_GetMACAddress(BYTE* pbAddress)
+{
+  return gs_stEthernetManager.pfGetAddress(pbAddress);
+}

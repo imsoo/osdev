@@ -1,7 +1,8 @@
 #include "ARP.h"
+#include "Ethernet.h"
+#include "IP.h"
 #include "DynamicMemory.h"
 #include "Utility.h"
-#include "Ethernet.h"
 #include "Console.h"
 
 static ARPMANAGER gs_stARPManager = { 0, };
@@ -11,6 +12,7 @@ void kARP_Task(void)
   FRAME stFrame;
   ARP_HEADER stARPHeader, *pstARPHeader;
   ARP_ENTRY *pstEntry;
+  BYTE vbIPAddress[4];
 
   // 초기화
   if (kARP_Initialize() == FALSE)
@@ -49,7 +51,8 @@ void kARP_Task(void)
       // 새로운 정보인 경우
       else {
         // 목적지 프로토콜 주소를 비교
-        if (kMemCmp(pstARPHeader->vbTargetProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4) == 0) {
+        kIP_GetIPAddress(vbIPAddress);
+        if (kMemCmp(pstARPHeader->vbTargetProtocolAddress, vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4) == 0) {
           kPrintf("ARP | New Entry\n");
           // 새 테이블 엔트리 삽입
           pstEntry = (ARP_ENTRY*)kAllocateMemory(sizeof(ARP_ENTRY));
@@ -71,8 +74,8 @@ void kARP_Task(void)
             pstARPHeader->wOperation = ARP_OPERATION_REPLY;
 
             // 근원지 주소 설정
-            kMemCpy(pstARPHeader->vbSenderHardwareAddress, gs_stARPManager.vbMACAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-            kMemCpy(pstARPHeader->vbSenderProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
+            kEthernet_GetMACAddress(pstARPHeader->vbSenderHardwareAddress);
+            kIP_GetIPAddress(pstARPHeader->vbSenderProtocolAddress);
 
             stFrame.qwDestAddress = kAddressArrayToNumber(pstARPHeader->vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
             stFrame.eDirection = FRAME_OUT;
@@ -90,21 +93,6 @@ BOOL kARP_Initialize(void)
 {
   int i;
   ARP_ENTRY* pstEntry;
-
-  // 임시
-  gs_stARPManager.vbMACAddress[0] = 0x52;
-  gs_stARPManager.vbMACAddress[1] = 0x54;
-  gs_stARPManager.vbMACAddress[2] = 0x00;
-  gs_stARPManager.vbMACAddress[3] = 0x12;
-  gs_stARPManager.vbMACAddress[4] = 0x34;
-  gs_stARPManager.vbMACAddress[5] = 0x56;
-  
-  
-  // QEMU Virtual Network Device : 10.0.2.15
-  gs_stARPManager.vbIPAddress[0] = 10;
-  gs_stARPManager.vbIPAddress[1] = 0;
-  gs_stARPManager.vbIPAddress[2] = 2;
-  gs_stARPManager.vbIPAddress[3] = 15;
 
   // 뮤텍스 초기화
   kInitializeMutex(&(gs_stARPManager.stLock));
@@ -164,6 +152,7 @@ ARP_ENTRY* kARPTable_Get(DWORD dwKey)
 QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
 {
   ARP_ENTRY* pstEntry;
+  BYTE vbIPAddress[4];
 
   // ARP 테이블 검색
   pstEntry = kARPTable_Get(dwProtocolAddress);
@@ -172,7 +161,8 @@ QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
   }
 
   // 존재하지 않는 경우 ARP Request 전송
-  kARP_Send(dwProtocolAddress);
+  kIP_GetIPAddress(vbIPAddress);
+  kARP_Send(dwProtocolAddress, kAddressArrayToNumber(vbIPAddress, 4));
   return 0;
 }
 
@@ -227,7 +217,7 @@ void kARPTable_Print(void)
 
 }
 
-void kARP_Send(DWORD dwDestinationProtocolAddress)
+void kARP_Send(DWORD dwDestinationProtocolAddress, DWORD dwSourceProtocolAddress)
 {
   int i;
   ARP_HEADER stARPPacket;
@@ -240,14 +230,11 @@ void kARP_Send(DWORD dwDestinationProtocolAddress)
   stARPPacket.wOperation = htons(ARP_OPERATION_REQUEST);
 
   // 하드웨어 주소 설정
-  kMemCpy(stARPPacket.vbSenderHardwareAddress, gs_stARPManager.vbMACAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-  for (i = 0; i < 6; i++) {
-    stARPPacket.vbTargetHardwareAddress[i] = 0xFF;
-  }
+  kEthernet_GetMACAddress(stARPPacket.vbSenderHardwareAddress);
+  kNumberToAddressArray(stARPPacket.vbTargetHardwareAddress, 0xFFFFFFFFFFFFFFFF, 6);
 
   // 프로토콜 주소 설정
-  // QEMU Virtual Network Device : 10.0.2.15
-  kMemCpy(stARPPacket.vbSenderProtocolAddress, gs_stARPManager.vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
+  kNumberToAddressArray(stARPPacket.vbSenderProtocolAddress, dwSourceProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
   kNumberToAddressArray(stARPPacket.vbTargetProtocolAddress, dwDestinationProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
   kAllocateFrame(&stFrame);

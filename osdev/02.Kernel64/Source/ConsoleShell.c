@@ -22,6 +22,8 @@
 #include "IP.h"
 #include "ARP.h"
 #include "ICMP.h"
+#include "UDP.h"
+#include "DHCP.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -89,8 +91,6 @@ static QWORD gs_vstStack[1024] = { 0, };
 // Mutex
 static MUTEX gs_stMutex;
 static volatile QWORD gs_qwAdder;
-
-static volatile QWORD gs_qwRandomValue = 0;
 
 /*
   Shell main function
@@ -595,12 +595,6 @@ static void kCPULoad(const char* pcParameterBuffer)
     kPrintf(vcBuffer);
   }
   kPrintf("\n");
-}
-
-QWORD kRandom(void)
-{
-  gs_qwRandomValue = (gs_qwRandomValue * 412153 + 5571031) >> 16;
-  return gs_qwRandomValue;
 }
 
 static void kDropCharactorThread(void)
@@ -1555,11 +1549,23 @@ static void kTest(const char* pcParameterBuffer)
   {
     kPrintf("Create kICMP_Task Fail\n");
   }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kUDP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kUDP_Task Fail\n");
+  }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kDHCP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kDHCP_Task Fail\n");
+  }
 }
 
 static void kTestSend(const char* pcParameterBuffer)
 {
-  kICMP_SendEcho(0xFFFFFFFF);
+  kICMP_SendEcho(0x0A000203);
 }
 
 static void kTestPrint(const char* pcParameterBuffer)

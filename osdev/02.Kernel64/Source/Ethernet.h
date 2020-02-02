@@ -72,6 +72,8 @@ void kEthernet_Handler(void);
 BOOL kEthernet_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kEthernet_GetFrameFromFrameQueue(FRAME* pstFrame);
 
+BOOL kEthernet_GetMACAddress(BYTE* pbAddress);
+
 
 
 #endif // !__ETHERNET_H__
