@@ -81,7 +81,8 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
   { "i", "InitEthernet(temp)" , kTest },
   { "s", "send ARP(temp)" , kTestSend },
-  { "p", "print ARP Table(temp)" , kTestPrint },
+  { "arp", "Print ARP Table" , kShowARPState },
+  { "ipconfig", "Print IP Configuration", kShowDHCPState },
 };
 
 // TCB
@@ -1565,10 +1566,19 @@ static void kTest(const char* pcParameterBuffer)
 
 static void kTestSend(const char* pcParameterBuffer)
 {
-  kICMP_SendEcho(0x0A000203);
+  // Google 
+  // kICMP_SendEcho(0xACD9A144);
+
+  // Gateway
+  kICMP_SendEcho(0x0A000202);
 }
 
-static void kTestPrint(const char* pcParameterBuffer)
+static void kShowARPState(const char* pcParameterBuffer)
 {
   kARPTable_Print();
+}
+
+static void kShowDHCPState(const char* pcParameterBuffer)
+{
+  kDHCP_ShowState();
 }

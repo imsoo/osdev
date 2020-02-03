@@ -27,7 +27,6 @@ void kIP_Task(void)
   kMemCpy(stIPHeader.vbSourceIPAddress, gs_stIPManager.vbIPAddress, 4);
   kMemCpy(stIPHeader.vbDestinationIPAddress, gs_stIPManager.vbGatewayAddress, 4);
 
-
   while (1)
   {
     // 재조합 버퍼 확인
@@ -104,6 +103,7 @@ void kIP_Task(void)
         stIPHeader.wIdentification = htons(gs_stIPManager.wIdentification++);
         stIPHeader.bProtocol = IP_PROTOCOL_ICMP;
         stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
+        kMemCpy(stIPHeader.vbSourceIPAddress, gs_stIPManager.vbIPAddress, 4);
         kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
         stIPHeader.wHeaderChecksum = htons(kIP_CalcChecksum(&stIPHeader));
 
@@ -562,19 +562,6 @@ BOOL kIP_Initialize(void)
   gs_stIPManager.pfUpUDP = kUDP_UpDirectionPoint;
   gs_stIPManager.pfSideOutICMP = kICMP_SideInPoint;
 
-  // 임시
-  // QEMU Virtual Network Device : 10.0.2.15
-  gs_stIPManager.vbIPAddress[0] = 10;
-  gs_stIPManager.vbIPAddress[1] = 0;
-  gs_stIPManager.vbIPAddress[2] = 2;
-  gs_stIPManager.vbIPAddress[3] = 15;
-
-  // QEMU GateWay : 10.0.2.3
-  gs_stIPManager.vbGatewayAddress[0] = 10;
-  gs_stIPManager.vbGatewayAddress[1] = 0;
-  gs_stIPManager.vbGatewayAddress[2] = 2;
-  gs_stIPManager.vbGatewayAddress[3] = 2;
-
   return TRUE;
 }
 
@@ -633,4 +620,17 @@ BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame)
 BOOL kIP_GetIPAddress(BYTE* pbAddress)
 {
   kMemCpy(pbAddress, gs_stIPManager.vbIPAddress, 4);
+  return TRUE;
+}
+
+BOOL kIP_SetIPAddress(BYTE* pbAddress)
+{
+  kMemCpy(gs_stIPManager.vbIPAddress, pbAddress, 4);
+  return TRUE;
+}
+
+BOOL kIP_SetGatewayIPAddress(BYTE* pbAddress)
+{
+  kMemCpy(gs_stIPManager.vbGatewayAddress, pbAddress, 4);
+  return TRUE;
 }

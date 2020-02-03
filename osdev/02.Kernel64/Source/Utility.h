@@ -40,6 +40,9 @@ int kDecimalToString(long lValue, char* pcBuffer);
 int kSPrintf(char* pcBuffer, const char* pcFormatString, ...);
 int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap);
 
+void kPrintIPAddress(const BYTE* pbAddress);
+void kPrintMACAddress(const BYTE* pbAddress);
+
 BOOL kIsGraphicMode(void);
 
 WORD kSwitchEndianWord(WORD wValue);

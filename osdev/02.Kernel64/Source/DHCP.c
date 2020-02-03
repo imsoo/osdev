@@ -2,6 +2,7 @@
 #include "UDP.h"
 #include "ARP.h"
 #include "Ethernet.h"
+#include "IP.h"
 #include "Utility.h"
 
 static DHCPMANAGER gs_stDHCPManager = { 0, };
@@ -12,7 +13,7 @@ static BYTE gs_vbDHCPParamterRequestList[DHCP_PARAMETER_REQUEST_LIST_SIZE] = {
   BOOTP_VENDOR_EXTENSIONS_CODE_DOMAINNAME
 };
 
-static BYTE* gs_vpbDHCPStateString[6] = {
+static BYTE* gs_vpbDHCPStateString[] = {
   "DHCP_INIT",
   "DHCP_SELECTING",
   "DHCP_REQUESTING",
@@ -158,12 +159,23 @@ DWORD kDHCP_GetLeaseTime(BYTE* pbTime)
 
 void kDHCP_ShowState(void)
 {
-  kPrintf("DHCP State : %s [%d]\n", gs_vpbDHCPStateString[gs_stDHCPManager.eState], gs_stDHCPManager.eState);
-  kPrintf("My IP Address : ");
-  kPrintf("My Subnet Address : ");
-  kPrintf("My DHCP Server Address : ");
-  kPrintf("My Gateway Address : ");
-  kPrintf("My DNS Address : ");
+  kPrintf("DHCP State : %s [%d]", gs_vpbDHCPStateString[gs_stDHCPManager.eState], gs_stDHCPManager.eState);
+  kPrintf("\n\tIP Address : ");
+  kPrintIPAddress(gs_stDHCPManager.vbMyIPAddress);
+
+  kPrintf("\n\tSubnet Mask : ");
+  kPrintIPAddress(gs_stDHCPManager.vbSubnetMask);
+
+  kPrintf("\n\tDHCP Server Address : ");
+  kPrintIPAddress(gs_stDHCPManager.vbServerIPAddress);
+
+  kPrintf("\n\tGateway Address : ");
+  kPrintIPAddress(gs_stDHCPManager.vbGateWayIPAddress);
+
+  kPrintf("\n\tDNS Address : ");
+  kPrintIPAddress(gs_stDHCPManager.vbDNSIPAddress);
+
+  kPrintf("\n");
 }
 
 void kDHCP_Task(void)
@@ -174,7 +186,7 @@ void kDHCP_Task(void)
   int iRetransmitCount = 0;
   int i;
   ARP_ENTRY* pstARPEntry;
-  QWORD qwTimer1, qwTimer2, qwHalfTimer, qwDurationOfLease;
+  QWORD qwTimer1, qwTimer2, qwHalfTimer, qwDurationOfLease, qwTempTimer;
 
   // 초기화
   if (kDHCP_Initialize() == FALSE)
@@ -290,18 +302,18 @@ void kDHCP_Task(void)
 
               
               // Subnet Mask Option 에서 서브넷 마스크 추출
-              if (kDHCP_CheckDHCPMessage(pstDHCPHeader, DHCP_OPTION_CODE_SUBNETMASK) == TRUE) {
+              if (kDHCP_FindOption(pstDHCPHeader, &stDHCPOption, DHCP_OPTION_CODE_SUBNETMASK) != FALSE) {
                 kMemCpy(gs_stDHCPManager.vbSubnetMask, stDHCPOption.pbValue, 4);
               }
 
               // Router Option 에서 게이트웨이 주소 추출
-              if (kDHCP_CheckDHCPMessage(pstDHCPHeader, DHCP_OPTION_CODE_ROUTER) == TRUE) {
-                kMemCpy(gs_stDHCPManager.vbSubnetMask, stDHCPOption.pbValue, 4);
+              if (kDHCP_FindOption(pstDHCPHeader, &stDHCPOption, DHCP_OPTION_CODE_ROUTER) != FALSE) {
+                kMemCpy(gs_stDHCPManager.vbGateWayIPAddress, stDHCPOption.pbValue, 4);
               }
 
               // DNS Server Option 에서 DNS 서버 주소 추출
-              if (kDHCP_CheckDHCPMessage(pstDHCPHeader, DHCP_OPTION_CODE_DOMAINNAMESERVER) == TRUE) {
-                kMemCpy(gs_stDHCPManager.vbSubnetMask, stDHCPOption.pbValue, 4);
+              if (kDHCP_FindOption(pstDHCPHeader, &stDHCPOption, DHCP_OPTION_CODE_DOMAINNAMESERVER) != FALSE) {
+                kMemCpy(gs_stDHCPManager.vbDNSIPAddress, stDHCPOption.pbValue, 4);
               }
 
               // DHCP_Request 메시지 전송 후 DHCP_REQUESTING 상태로 변경
@@ -329,22 +341,33 @@ void kDHCP_Task(void)
               // DHCP 대여 만료 시간 설정
               gs_stDHCPManager.qwTime += qwDurationOfLease;
 
+              // ARP 패킷 전송전 시간 기록
+              qwTempTimer = kGetTickCount();
+
               // ARP 이용하여 할당 받은 IP 주소 중복 여부 검사
               // 소스 IP 주소를 0으로 설정한 ARP 패킷 전송
-              for (i = 0; i < 0xFF; i++) {
-                kARP_Send(kAddressArrayToNumber(gs_stDHCPManager.vbMyIPAddress, 4), 0x00000000);
-              }
+              kARP_Send(kAddressArrayToNumber(gs_stDHCPManager.vbMyIPAddress, 4), 0x00000000);
 
-              // ARP 테이블을 검색하여 엔트리 존재 여부 검사 
-              pstARPEntry = kARPTable_Get(kAddressArrayToNumber(gs_stDHCPManager.vbMyIPAddress, 4));
+              // 잠깐 대기
+              kSleep(kRandom() % 1000 + 500);
 
-              // 엔트리가 없는경우 유일한 IP 주소임을 확인
-              if (pstARPEntry == NULL) {
+              // ARP 테이블을 검색하여 응답 여부 검사
+              // 테이블의 엔트리 등록 시간을 확인
+              pstARPEntry = kARPTable_Get(0x00000000);
+
+              // 엔트리 등록 시간이  ARP 패킷 전송전 시간 보다 작은 경우
+              // (ARP 테이블이 갱신되지 않는 경우, 응답이 없는 경우)
+              // 유일한 IP 주소임을 확인
+              if (pstARPEntry->qwTime <= qwTempTimer) {
                 // 송신자 주소를 내 IP 주소로 설정한 ARP 브로드 캐스트 패킷 전송
                 // 이웃들의 ARP 테이블 갱신 용도
                 kARP_Send(0xFFFFFFFF, kAddressArrayToNumber(gs_stDHCPManager.vbMyIPAddress, 4));
                 // DHCP_BINDING 상태로 변경
                 gs_stDHCPManager.eState = DHCP_BOUND;
+
+                // IP 모듈 IP, Gateway 주소 설정
+                kIP_SetIPAddress(gs_stDHCPManager.vbMyIPAddress);
+                kIP_SetGatewayIPAddress(gs_stDHCPManager.vbGateWayIPAddress);
               }
               // 중복 IP 주소를 DHCP 서버로 부터 할당받은 경우
               else {

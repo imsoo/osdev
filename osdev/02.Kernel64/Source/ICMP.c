@@ -5,10 +5,31 @@
 
 static ICMPMANAGER gs_stICMPManager = { 0, };
 
+static BYTE* gs_vpbICMPTypeString[] = {
+  "ICMP_TYPE_ECHOREPLY",
+  "UNKNOWN",
+  "UNKNOWN",
+  "ICMP_TYPE_DESTINATIONUNREACHABLE",
+  "ICMP_TYPE_SOURECEQUENCE",
+  "ICMP_TYPE_REDIRECT",
+  "UNKNOWN",
+  "UNKNOWN",
+  "ICMP_TYPE_ECHO",
+  "ICMP_TYPE_ROUTERADVERTISMENT",
+  "ICMP_TYPE_ROUTERSOLICITATION",
+  "ICMP_TYPE_TIMEEXCEEDED",
+  "ICMP_TYPE_PARAMETERPROBLEM",
+  "ICMP_TYPE_TIMESTAMP",
+  "ICMP_TYPE_TIMESTAMPREPLY",
+  "ICMP_TYPE_INFROMATIONREQUEST",
+  "ICMP_TYPE_INFORMATIONREPLY"
+};
+
 void kICMP_Task(void)
 {
   int i;
   FRAME stFrame;
+  ICMP_HEADER* pstHeader;
 
   // ÃÊ±âÈ­
   if (kICMP_Initialize() == FALSE)
@@ -21,16 +42,17 @@ void kICMP_Task(void)
       continue;
     }
 
+
+    pstHeader = stFrame.pbCur;
     switch (stFrame.eDirection)
     {
     case FRAME_OUT:
-      kPrintf("ICMP | Send ICMP Packet\n");
+      kPrintf("ICMP | Send ICMP Packet [%s]\n", gs_vpbICMPTypeString[pstHeader->bType]);
 
       gs_stICMPManager.pfSideOut(stFrame);
       break;
     case FRAME_IN:
-      kPrintf("ICMP | Recevie ICMP Packet\n");
-      kPrintFrame(&stFrame);
+      kPrintf("ICMP | Recevie ICMP Packet [%s]\n", gs_vpbICMPTypeString[pstHeader->bType]);
       break;
     }
   }

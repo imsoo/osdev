@@ -11,12 +11,14 @@
 #define ICMP_TYPE_SOURECEQUENCE           0x04
 #define ICMP_TYPE_REDIRECT                0x05
 #define ICMP_TYPE_ECHO                    0x08
-#define ICMP_TYPE_TIMEEXCEEDED            0x11
-#define ICMP_TYPE_PARAMETERPROBLEM        0x12
-#define ICMP_TYPE_TIMESTAMP               0x13
-#define ICMP_TYPE_TIMESTAMP_REPLY         0x14
-#define ICMP_TYPE_INFROMATIONREQUEST      0x15
-#define ICMP_TYPE_INFORMATION_REPLY       0x16
+#define ICMP_TYPE_ROUTERADVERTISMENT      0x09
+#define ICMP_TYPE_ROUTERSOLICITATION      0x0A
+#define ICMP_TYPE_TIMEEXCEEDED            0x0B
+#define ICMP_TYPE_PARAMETERPROBLEM        0x0C
+#define ICMP_TYPE_TIMESTAMP               0x0D
+#define ICMP_TYPE_TIMESTAMPREPLY         0x0E
+#define ICMP_TYPE_INFROMATIONREQUEST      0x0F
+#define ICMP_TYPE_INFORMATIONREPLY       0x10
 
 // Destination Unreachable Message
 #define ICMP_CODE_NETUNREACHABLE              0x00

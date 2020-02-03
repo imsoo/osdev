@@ -43,6 +43,7 @@ typedef struct kARPTableEntry {
   LISTLINK stEntryLink;
   QWORD qwHardwareAddress;
   BYTE bType;
+  QWORD qwTime;
 } ARP_ENTRY;
 
 typedef struct kARPTable {

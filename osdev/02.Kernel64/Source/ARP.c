@@ -13,6 +13,7 @@ void kARP_Task(void)
   ARP_HEADER stARPHeader, *pstARPHeader;
   ARP_ENTRY *pstEntry;
   BYTE vbIPAddress[4];
+  BYTE bMergeFlag;
 
   // 초기화
   if (kARP_Initialize() == FALSE)
@@ -37,24 +38,32 @@ void kARP_Task(void)
 
       kDecapuslationFrame(&stFrame, &pstARPHeader, sizeof(ARPMANAGER), NULL);
 
+      // 이더넷 인지 검사
+      if (ntohs(pstARPHeader->wHardwareType) != ARP_HADRWARETYPE_ETHERNET)
+        break;
+
       // IPv4 인지 검사
       if (ntohs(pstARPHeader->wProtocolType) != ARP_PROTOCOLTYPE_IPV4)
         break;
 
+      bMergeFlag = FALSE;
+
       // 테이블 갱신
       pstEntry = kARPTable_Get(kAddressArrayToNumber(pstARPHeader->vbSenderProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4));
-
       // 엔트리가 이미 존재하는 경우 하드웨어 주소 갱신
       if (pstEntry != NULL) {
         pstEntry->qwHardwareAddress = kAddressArrayToNumber(pstARPHeader->vbSenderHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+        pstEntry->qwTime = kGetTickCount();
+        bMergeFlag = TRUE;
       }
-      // 새로운 정보인 경우
-      else {
-        // 목적지 프로토콜 주소를 비교
-        kIP_GetIPAddress(vbIPAddress);
-        if (kMemCmp(pstARPHeader->vbTargetProtocolAddress, vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4) == 0) {
+
+      // 목적지 프로토콜 주소를 비교
+      kIP_GetIPAddress(vbIPAddress);
+      if (kMemCmp(pstARPHeader->vbTargetProtocolAddress, vbIPAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4) == 0) {
+
+        // 새 테이블 엔트리 삽입
+        if (bMergeFlag == FALSE) {
           kPrintf("ARP | New Entry\n");
-          // 새 테이블 엔트리 삽입
           pstEntry = (ARP_ENTRY*)kAllocateMemory(sizeof(ARP_ENTRY));
           if (pstEntry == NULL) {
             return FALSE;
@@ -62,25 +71,27 @@ void kARP_Task(void)
           pstEntry->stEntryLink.qwID = kAddressArrayToNumber(pstARPHeader->vbSenderProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
           pstEntry->qwHardwareAddress = kAddressArrayToNumber(pstARPHeader->vbSenderHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
           pstEntry->bType = ARP_TABLE_DYNAMIC_TYPE;
+          pstEntry->qwTime = kGetTickCount();
+
           kARPTable_Put(pstEntry);
+        }
 
-          // ARP 요청인 경우 응답 패킷 생성
-          if (ntohs(pstARPHeader->wOperation) == ARP_OPERATION_REQUEST) {
-            // 목적지 주소를 근원지 주소로 변경
-            kMemCpy(pstARPHeader->vbTargetHardwareAddress, pstARPHeader->vbSenderHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-            kMemCpy(pstARPHeader->vbTargetProtocolAddress, pstARPHeader->vbSenderProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
+        // ARP 요청인 경우 응답 패킷 생성
+        if (ntohs(pstARPHeader->wOperation) == ARP_OPERATION_REQUEST) {
+          // 목적지 주소를 근원지 주소로 변경
+          kMemCpy(pstARPHeader->vbTargetHardwareAddress, pstARPHeader->vbSenderHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+          kMemCpy(pstARPHeader->vbTargetProtocolAddress, pstARPHeader->vbSenderProtocolAddress, ARP_PROTOCOLADDRESSLENGTH_IPV4);
 
-            // Operation 변경
-            pstARPHeader->wOperation = ARP_OPERATION_REPLY;
+          // Operation 변경
+          pstARPHeader->wOperation = ARP_OPERATION_REPLY;
 
-            // 근원지 주소 설정
-            kEthernet_GetMACAddress(pstARPHeader->vbSenderHardwareAddress);
-            kIP_GetIPAddress(pstARPHeader->vbSenderProtocolAddress);
+          // 근원지 주소 설정
+          kEthernet_GetMACAddress(pstARPHeader->vbSenderHardwareAddress);
+          kIP_GetIPAddress(pstARPHeader->vbSenderProtocolAddress);
 
-            stFrame.qwDestAddress = kAddressArrayToNumber(pstARPHeader->vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
-            stFrame.eDirection = FRAME_OUT;
-            kARP_PutFrameToFrameQueue(&stFrame);
-          }
+          stFrame.qwDestAddress = kAddressArrayToNumber(pstARPHeader->vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
+          stFrame.eDirection = FRAME_OUT;
+          kARP_PutFrameToFrameQueue(&stFrame);
         }
       }
 
@@ -120,11 +131,23 @@ BOOL kARP_Initialize(void)
   if (pstEntry == NULL) {
     return FALSE;
   }
-
-  // 테이블 초기 엔트리 설정
+  // 테이블 초기 엔트리 설정 (BroadCast)
   pstEntry->stEntryLink.qwID = ARP_TABLE_PA_BROADCAST;
   pstEntry->qwHardwareAddress = ARP_TABLE_HA_BROADCAST;
   pstEntry->bType = ARP_TABLE_STATIC_TYPE;
+  pstEntry->qwTime = kGetTickCount();
+  kARPTable_Put(pstEntry);
+
+  // TODO : 동적할당이 아닌 POOL 형태로 개선
+  pstEntry = (ARP_ENTRY*)kAllocateMemory(sizeof(ARP_ENTRY));
+  if (pstEntry == NULL) {
+    return FALSE;
+  }
+  // 테이블 초기 엔트리 설정 (DHCP 확인용)
+  pstEntry->stEntryLink.qwID = 0x0;
+  pstEntry->qwHardwareAddress = 0x0;
+  pstEntry->bType = ARP_TABLE_STATIC_TYPE;
+  pstEntry->qwTime = kGetTickCount();
   kARPTable_Put(pstEntry);
 
   return TRUE;
@@ -153,6 +176,8 @@ QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
 {
   ARP_ENTRY* pstEntry;
   BYTE vbIPAddress[4];
+  static DWORD dwPreviousProtocolAddress;
+  static QWORD qwPreviousTime;
 
   // ARP 테이블 검색
   pstEntry = kARPTable_Get(dwProtocolAddress);
@@ -160,9 +185,15 @@ QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress)
     return pstEntry->qwHardwareAddress;
   }
 
-  // 존재하지 않는 경우 ARP Request 전송
-  kIP_GetIPAddress(vbIPAddress);
-  kARP_Send(dwProtocolAddress, kAddressArrayToNumber(vbIPAddress, 4));
+  // 테이블에 존재하지 않아 이전에 
+  // ARP Request Broadcast 패킷을 전송한 경우 500ms 동안 재전송 하지 않음.
+  if ((dwPreviousProtocolAddress != dwProtocolAddress) || (kGetTickCount() - qwPreviousTime >= 500)) {
+    qwPreviousTime = kGetTickCount();
+    dwPreviousProtocolAddress = dwProtocolAddress;
+    // 존재하지 않는 경우 ARP Request 전송
+    kIP_GetIPAddress(vbIPAddress);
+    kARP_Send(dwProtocolAddress, kAddressArrayToNumber(vbIPAddress, 4));
+  }
   return 0;
 }
 
@@ -195,18 +226,10 @@ void kARPTable_Print(void)
         kNumberToAddressArray(vbProtocolAddress, pstEntry->stEntryLink.qwID, ARP_PROTOCOLADDRESSLENGTH_IPV4);
         kNumberToAddressArray(vbHardwareAddress, pstEntry->qwHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
 
-        for (j = 0; j < ARP_PROTOCOLADDRESSLENGTH_IPV4; j++) {
-          if (j != 0)
-            kPrintf(".");
-          kPrintf("%d", vbProtocolAddress[j]);
-        }
+        kPrintIPAddress(vbProtocolAddress);
         kPrintf(" | ");
 
-        for (j = 0; j < ARP_HARDWAREADDRESSLENGTH_ETHERNET; j++) {
-          if (j != 0)
-            kPrintf("-");
-          kPrintf("%x", vbHardwareAddress[j]);
-        }
+        kPrintMACAddress(vbHardwareAddress);
         kPrintf(" | ");
 
         kPrintf("%s\n", s_vpbTypeString[pstEntry->bType]);

@@ -94,8 +94,11 @@ static void kShowVBEModeInfo(const char* pcParameterBuffer);
 
 // Loader
 static void kExecuteApplicationProgram(const char* pcParameterBuffer);
+
+// ETC
 static void kTest(const char* pcParameterBuffer);
 static void kTestSend(const char* pcParameterBuffer);
-static void kTestPrint(const char* pcParameterBuffer);
+static void kShowARPState(const char* pcParameterBuffer);
+static void kShowDHCPState(const char* pcParameterBuffer);
 
 #endif // __CONSOLESHELL_H__

@@ -8,6 +8,7 @@ QWORD kGetTickCount(void) {
   return g_qwTickCount;
 }
 
+
 static volatile QWORD gs_qwRandomValue = 0;
 QWORD kRandom(void)
 {
@@ -548,6 +549,26 @@ int kVSPrintf(char* pcBuffer, const char* pcFormatString, va_list ap)
   // set NULL terminate and return result string
   pcBuffer[iBufferIndex] = '\0';
   return iBufferIndex;
+}
+
+void kPrintIPAddress(const BYTE* pbAddress)
+{
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (i != 0)
+      kPrintf(".");
+    kPrintf("%d", pbAddress[i]);
+  }
+}
+
+void kPrintMACAddress(const BYTE* pbAddress)
+{
+  int i;
+  for (i = 0; i < 6; i++) {
+    if (i != 0)
+      kPrintf("-");
+    kPrintf("%x", pbAddress[i]);
+  }
 }
 
 /*

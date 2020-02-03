@@ -14,6 +14,7 @@ static BYTE gs_vbBroadCast[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 BOOL kEthernet_DownDirectionPoint(FRAME stFrame)
 {
   stFrame.eDirection = FRAME_IN;
+  stFrame.dwRetransmitCount = 0;
   if (kEthernet_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
@@ -57,7 +58,7 @@ void kEthernet_Task(void)
       else {
         kPrintf("Ethernet | Unkown Packet | Type : %d\n", pstEthernetHeader->wType);
       }
-      break;
+      break;  /* End of case FRAME_OUT */
     case FRAME_IN:
       kPrintf("Ethernet | Send Frame | bType : %x\n", stFrame.bType);
 
@@ -71,15 +72,20 @@ void kEthernet_Task(void)
         gs_stEthernetManager.pfSend(stFrame.pbCur, stFrame.wLen);
 
         kFreeFrame(&stFrame);
-        break;
+        break;  /* End of case FRAME_ARP */
       case FRAME_IP:
         stEthernetHeader.wType = htons(ETHERNET_HEADER_TYPE_IP);
 
         // ARP 테이블에 존재하지 않는 경우 
         qwDestinationHardwareAddress = kARP_GetHardwareAddress(stFrame.qwDestAddress);
         if (qwDestinationHardwareAddress == 0) {
-          // 큐에 삽입하여 재시도
-          kEthernet_PutFrameToFrameQueue(&stFrame);
+          stFrame.dwRetransmitCount += 1;
+
+          // 재전송 횟수 확인하여 재시도 여부 결정
+          if (stFrame.dwRetransmitCount <= ETHERNET_RETRANSMIT_MAX_COUNT) {
+            // 큐에 삽입하여 재시도
+            kEthernet_PutFrameToFrameQueue(&stFrame);
+          }
         }
         // 존재 하는 경우 전송
         else {
@@ -92,12 +98,10 @@ void kEthernet_Task(void)
           kFreeFrame(&stFrame);
         }
 
-        break;
-      default:
-        break;
+        break; /* End of case FRAME_IP */
       }
 
-      break;
+      break; /* End of case FRAME_IN */
     }
   }
 }

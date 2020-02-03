@@ -35,7 +35,10 @@ typedef struct kFrame
   WORD  wLen;
   FRAME_TYPE bType;
   QWORD qwDestAddress;
-  DWORD dwDestPort;
+  union {
+    DWORD dwDestPort;
+    DWORD dwRetransmitCount;
+  };
   FRAME_DIRECTION eDirection;
 } FRAME;
 
