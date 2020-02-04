@@ -105,6 +105,7 @@
     <ClCompile Include="02.Kernel64\Source\ConsoleShell.c" />
     <ClCompile Include="02.Kernel64\Source\Descriptor.c" />
     <ClCompile Include="02.Kernel64\Source\DHCP.c" />
+    <ClCompile Include="02.Kernel64\Source\DNS.c" />
     <ClCompile Include="02.Kernel64\Source\DynamicMemory.c" />
     <ClCompile Include="02.Kernel64\Source\E1000.c" />
     <ClCompile Include="02.Kernel64\Source\EnglishFont.c" />
@@ -188,6 +189,7 @@
     <ClInclude Include="02.Kernel64\Source\ConsoleShell.h" />
     <ClInclude Include="02.Kernel64\Source\Descriptor.h" />
     <ClInclude Include="02.Kernel64\Source\DHCP.h" />
+    <ClInclude Include="02.Kernel64\Source\DNS.h" />
     <ClInclude Include="02.Kernel64\Source\DynamicMemory.h" />
     <ClInclude Include="02.Kernel64\Source\E1000.h" />
     <ClInclude Include="02.Kernel64\Source\Ethernet.h" />

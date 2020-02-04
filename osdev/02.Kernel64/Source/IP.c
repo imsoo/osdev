@@ -2,6 +2,7 @@
 #include "DynamicMemory.h"
 #include "Utility.h"
 #include "Ethernet.h"
+#include "ARP.h"
 #include "ICMP.h"
 #include "UDP.h"
 
@@ -12,6 +13,7 @@ void kIP_Task(void)
   FRAME stFrame;
   IP_HEADER stIPHeader, *pstIPHeader;
   BYTE* pbIPPayload;
+  BYTE vbBroadcastAddress[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
 
   // 초기화
   if (kIP_Initialize() == FALSE)
@@ -40,10 +42,17 @@ void kIP_Task(void)
 
     switch (stFrame.eDirection)
     {
-    case FRAME_OUT:
+    case FRAME_UP:
       kDecapuslationFrame(&stFrame, &pstIPHeader, sizeof(IP_HEADER), &pbIPPayload);
 
       kPrintf("IP | Receive IP Datagram %x\n", pstIPHeader->bProtocol);
+
+      // IP 주소 확인 (내 IP 주소, 브로드캐스트 주소 모두 아니면 버림)
+      if ((kMemCmp(stIPHeader.vbDestinationIPAddress, gs_stIPManager.vbIPAddress, 4) == 0) &&
+        (kMemCmp(stIPHeader.vbDestinationIPAddress, vbBroadcastAddress, 4) == 0))
+      {
+        break;
+      }
 
       // IP 버전 확인
       if ((stIPHeader.bVersionAndIHL >> IP_VERSION_SHIFT) != IP_VERSION_IPV4) {
@@ -71,6 +80,7 @@ void kIP_Task(void)
           gs_stIPManager.pfUpUDP(stFrame);
           break;
         default:
+          kPrintf("IP | Discard IP Datagram \n");
           // ICMP : Destination Unreachable Message | protocol unreachable 전송
           kICMP_SendMessage(kAddressArrayToNumber(pstIPHeader->vbSourceIPAddress, 4),
             ICMP_TYPE_DESTINATIONUNREACHABLE, ICMP_CODE_PROTOCOLUNREACHABLE, pstIPHeader, pbIPPayload);
@@ -80,12 +90,12 @@ void kIP_Task(void)
       }
 
       break;  /* End of case FRAME_OUT: */
-    case FRAME_IN:
-      kPrintf("IP | Send IP Datagram \n");
+    case FRAME_DOWN:
 
       switch (stFrame.bType)
       {
       case FRAME_IP:
+        kPrintf("IP | Send IP Datagram \n");
         pstIPHeader = (IP_HEADER*)stFrame.pbCur;
 
         // IP 데이터그램의 크기가 MTU 보다 큰 경우 단편화 진행
@@ -94,7 +104,34 @@ void kIP_Task(void)
         }
         // MTU 보다 작은 경우 하위 레이어로 이동
         else {
-          gs_stIPManager.pfDown(stFrame);
+
+          // IP 목적지 주소가 255.255.255.255 브로드캐스트가 아닌 경우 게이트웨이로 전송
+          if ((stFrame.qwDestAddress & 0xFFFFFFFF) != 0xFFFFFFFF) {
+
+            stFrame.qwDestAddress = kAddressArrayToNumber(gs_stIPManager.vbGatewayAddress, 4);
+          }
+
+          // ARP 수행
+          stFrame.qwDestAddress = kARP_GetHardwareAddress(stFrame.qwDestAddress);
+
+          // ARP 테이블에 존재하지 않는 경우 
+          if (stFrame.qwDestAddress == 0) {
+            // 큐에 삽입하여 재시도
+            if (stFrame.dwRetransmitCount <= 0xFF) {
+              kIP_PutFrameToFrameQueue(&stFrame);
+            }
+            // 재전송 횟수 초과한 경우 경우 버림.
+            else {
+              kPrintf("IP | Discard IP Datagram \n");
+              kFreeFrame(&stFrame);
+            }
+          }
+
+          // MAC 주소 획득한 경우
+          // 하위레이어 (이더넷)으로 전달하여 전송 요청
+          else {
+            gs_stIPManager.pfDown(stFrame);
+          }
         }
         break;
 
@@ -112,7 +149,6 @@ void kIP_Task(void)
 
         // 하위 레이어로 전송
         stFrame.bType = FRAME_IP;
-        stFrame.qwDestAddress = kAddressArrayToNumber(gs_stIPManager.vbGatewayAddress, 4);
         kIP_PutFrameToFrameQueue(&stFrame);
         break;
 
@@ -131,13 +167,12 @@ void kIP_Task(void)
         // 하위 레이어로 전송
         stFrame.bType = FRAME_IP;
         kIP_PutFrameToFrameQueue(&stFrame);
-
         break;
       default:
         break;
       }
 
-      break;  /* End of case FRAME_IN: */
+      break;  /* End of case FRAME_DOWN: */
     }
   }
 }
@@ -517,7 +552,7 @@ BYTE kIP_Reassembly(FRAME* stFrame)
 
 BOOL kIP_UpDirectionPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_OUT;
+  stFrame.eDirection = FRAME_UP;
   if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
@@ -525,7 +560,8 @@ BOOL kIP_UpDirectionPoint(FRAME stFrame)
 
 BOOL kIP_DownDirectionPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_IN;
+  stFrame.dwRetransmitCount = 0;
+  stFrame.eDirection = FRAME_DOWN;
   if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
@@ -533,7 +569,8 @@ BOOL kIP_DownDirectionPoint(FRAME stFrame)
 
 BOOL kIP_SideInPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_IN;
+  stFrame.dwRetransmitCount = 0;
+  stFrame.eDirection = FRAME_DOWN;
   if (kIP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
@@ -617,10 +654,14 @@ BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame)
   return bResult;
 }
 
-BOOL kIP_GetIPAddress(BYTE* pbAddress)
+DWORD kIP_GetIPAddress(BYTE* pbAddress)
 {
-  kMemCpy(pbAddress, gs_stIPManager.vbIPAddress, 4);
-  return TRUE;
+  if (pbAddress != NULL) {
+    kMemCpy(pbAddress, gs_stIPManager.vbIPAddress, 4);
+    return 0;
+  }
+  else
+    return (kAddressArrayToNumber(gs_stIPManager.vbIPAddress, 4) & 0xFFFFFFFF);
 }
 
 BOOL kIP_SetIPAddress(BYTE* pbAddress)

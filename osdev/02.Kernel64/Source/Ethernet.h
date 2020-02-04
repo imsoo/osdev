@@ -14,11 +14,6 @@
 #define ETHERNET_HEADER_TYPE_ARP 0x0806
 #define ETHERNET_HEADER_TYPE_IP  0x0800
 
-// 목적지 Hardware MAC 주소를 알지 못해
-// 재전송 하는 프레임 최대 가능 횟수
-#define ETHERNET_RETRANSMIT_MAX_COUNT 0x30
-
-
 typedef enum kHandlerStatus
 {
   HANDLER_LSC = 0,

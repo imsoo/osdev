@@ -7,6 +7,7 @@
 
 #define UDP_PORT_DHCP_SERVER 67
 #define UDP_PORT_DHCP_CLIENT 68
+#define UDP_PORT_DNS  53
 
 #pragma pack(push, 1)
 
@@ -19,8 +20,9 @@ typedef struct kUDPManager
   FRAME* pstFrameBuffer;
 
   UpFunction pfUpDHCP;
-  DownFunction pfDownIP;
+  UpFunction pfUpDNS;
 
+  DownFunction pfDownIP;
 } UDPMANAGER;
 
 typedef struct kUDPHeader {
@@ -42,8 +44,6 @@ typedef struct kIPv4PseudoHeader {
 
 void kUDP_Task(void);
 BOOL kUDP_Initialize(void);
-
-WORD kUDP_CalcChecksum(IPv4Pseudo_Header* pstIPHeader, UDP_HEADER* pstUDPHeader, void* pvData, WORD wDataLen);
 
 BOOL kUDP_DownDirectionPoint(FRAME stFrame);
 BOOL kUDP_UpDirectionPoint(FRAME stFrame);

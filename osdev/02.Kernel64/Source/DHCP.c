@@ -4,6 +4,7 @@
 #include "Ethernet.h"
 #include "IP.h"
 #include "Utility.h"
+#include "DNS.h"
 
 static DHCPMANAGER gs_stDHCPManager = { 0, };
 static BYTE gs_vbDHCPParamterRequestList[DHCP_PARAMETER_REQUEST_LIST_SIZE] = {
@@ -102,7 +103,7 @@ void kDHCP_SendMessage(BYTE bMessageType, BYTE bRenewFlag)
   stFrame.bType = FRAME_DHCP;
   stFrame.dwDestPort = (UDP_PORT_DHCP_CLIENT << 16) | UDP_PORT_DHCP_SERVER;
   stFrame.qwDestAddress = 0x00000000FFFFFFFF;
-  stFrame.eDirection = FRAME_IN;
+  stFrame.eDirection = FRAME_DOWN;
 
   kDHCP_PutFrameToFrameQueue(&stFrame);
 }
@@ -279,7 +280,7 @@ void kDHCP_Task(void)
 
     switch (stFrame.eDirection)
     {
-    case FRAME_OUT:
+    case FRAME_UP:
       kPrintf("DHCP | Receive DHCP Packet \n");
       kDecapuslationFrame(&stFrame, &pstDHCPHeader, sizeof(DHCP_Header), NULL);
 
@@ -368,6 +369,9 @@ void kDHCP_Task(void)
                 // IP 모듈 IP, Gateway 주소 설정
                 kIP_SetIPAddress(gs_stDHCPManager.vbMyIPAddress);
                 kIP_SetGatewayIPAddress(gs_stDHCPManager.vbGateWayIPAddress);
+
+                // DNS 모듈 DNS 서버 주소 설정
+                kDNS_SetDNSAddress(gs_stDHCPManager.vbDNSIPAddress);
               }
               // 중복 IP 주소를 DHCP 서버로 부터 할당받은 경우
               else {
@@ -412,11 +416,11 @@ void kDHCP_Task(void)
         break;
       }
 
-      break;  /* End of case FRAME_OUT: */
-    case FRAME_IN:
+      break;  /* End of case FRAME_UP: */
+    case FRAME_DOWN:
       kPrintf("DHCP | Send DHCP Packet\n");
       gs_stDHCPManager.pfDownUDP(stFrame);
-      break;  /* End of case FRAME_IN: */
+      break;  /* End of case FRAME_DOWN: */
     }
   }
 }
@@ -445,7 +449,7 @@ BOOL kDHCP_Initialize(void)
 
 BOOL kDHCP_UpDirectionPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_OUT;
+  stFrame.eDirection = FRAME_UP;
   if (kDHCP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;

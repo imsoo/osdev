@@ -67,16 +67,18 @@ typedef struct kARPManager
 // function
 void kARP_Task(void);
 BOOL kARP_Initialize(void);
-void kARPTable_Put(ARP_ENTRY* pstEntry);
-ARP_ENTRY* kARPTable_Get(DWORD dwKey);
 
-QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress);
-
-BOOL kARP_SideInPoint(FRAME stFrame);
-
-void kARPTable_Print(void);
 void kARP_Send(DWORD dwDestinationProtocolAddress, DWORD dwSourceProtocolAddress);
 
+void kARPTable_Put(ARP_ENTRY* pstEntry);
+ARP_ENTRY* kARPTable_Get(DWORD dwKey);
+void kARPTable_Print(void);
+QWORD kARP_GetHardwareAddress(DWORD dwProtocolAddress);
+
+// TODO : 만료된 엔트리 제거
+void kARPTable_Clean(void);
+
+BOOL kARP_SideInPoint(FRAME stFrame);
 BOOL kARP_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kARP_GetFrameFromFrameQueue(FRAME* pstFrame);
 

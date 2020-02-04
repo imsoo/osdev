@@ -71,10 +71,7 @@ BOOL kE1000_Send(const void* pvData, WORD wLen)
   gs_stE1000Manager.wTxTail = (gs_stE1000Manager.wTxTail + 1) % DESC_TX_NUM;
   kE1000_WriteCommand(REG_TDT, gs_stE1000Manager.wTxTail);
 
-  while (!(gs_stE1000Manager.vpstTxDescriptor[wOldTxTail]->bStatus & 0xff))
-  {
-    kSleep(1);
-  }
+  while (!(gs_stE1000Manager.vpstTxDescriptor[wOldTxTail]->bStatus & 0xff));
   return TRUE;
 }
 

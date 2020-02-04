@@ -8,7 +8,7 @@ jmp 0x07C0:START	; copy 0x07C0 to CS register and jump START label
 TOTAL_SECTOR_COUNT: dw 0x02 ; os image size (sector count)
 KERNEL32_SECTOR_COUNT: dw 0x02 ; prevention mode kernel size (sector count)
 BOOTSTRAP_PROCESSOR: db 0x01  ; BootStrap Processor Flag (0x00 = AP)
-START_GRAPHIC_MODE:  db 0x00   ; Graphic Mode Flag 
+START_GRAPHIC_MODE:  db 0x01   ; Graphic Mode Flag 
 
 ;-----------------------------------
 ; code section begin

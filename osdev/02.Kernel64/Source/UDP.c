@@ -1,5 +1,6 @@
 #include "UDP.h"
 #include "DHCP.h"
+#include "DNS.h"
 #include "IP.h"
 #include "Utility.h"
 
@@ -32,7 +33,7 @@ void kUDP_Task(void)
 
     switch (stFrame.eDirection)
     {
-    case FRAME_OUT:
+    case FRAME_UP:
       kPrintf("UDP | Receive UDP Datagram \n");
 
       kDecapuslationFrame(&stFrame, &pstUDPHeader, sizeof(UDP_HEADER), &pbUDPPayload);
@@ -43,12 +44,21 @@ void kUDP_Task(void)
         gs_stUDPManager.pfUpDHCP(stFrame);
         break;
       default:
-        kFreeFrame(&stFrame);
+        switch (ntohs(pstUDPHeader->wSourcePort))
+        {
+        case UDP_PORT_DNS:
+          gs_stUDPManager.pfUpDNS(stFrame);
+          break;
+        default:
+          kFreeFrame(&stFrame);
+          break;
+        }
         break;
       }
 
-      break;  /* End of case FRAME_OUT: */
-    case FRAME_IN:
+
+      break;  /* End of case FRAME_UP: */
+    case FRAME_DOWN:
       kPrintf("UDP | Send UDP Datagram \n");
       stUDPHeader.wDestinationPort = htons(stFrame.dwDestPort);
       stUDPHeader.wSourcePort = htons(stFrame.dwDestPort >> 16);
@@ -68,7 +78,7 @@ void kUDP_Task(void)
 
       // IP로 전송
       gs_stUDPManager.pfDownIP(stFrame);
-      break;  /* End of case FRAME_IN: */
+      break;  /* End of case FRAME_DOWN: */
     }
   }
 }
@@ -90,14 +100,16 @@ BOOL kUDP_Initialize(void)
 
   // 레이어 설정
   gs_stUDPManager.pfDownIP = kIP_DownDirectionPoint;
+
   gs_stUDPManager.pfUpDHCP = kDHCP_UpDirectionPoint;
+  gs_stUDPManager.pfUpDNS = kDNS_UpDirectionPoint;
 
   return TRUE;
 }
 
 BOOL kUDP_DownDirectionPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_IN;
+  stFrame.eDirection = FRAME_DOWN;
   if (kUDP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;
@@ -105,7 +117,7 @@ BOOL kUDP_DownDirectionPoint(FRAME stFrame)
 
 BOOL kUDP_UpDirectionPoint(FRAME stFrame)
 {
-  stFrame.eDirection = FRAME_OUT;
+  stFrame.eDirection = FRAME_UP;
   if (kUDP_PutFrameToFrameQueue(&stFrame) == FALSE)
     return FALSE;
   return TRUE;

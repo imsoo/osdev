@@ -13,7 +13,9 @@ typedef BOOL(*SideOutFunction)(FRAME);
 typedef enum kFrameDirection
 {
   FRAME_IN = 0,
-  FRAME_OUT = 1
+  FRAME_OUT = 1,
+  FRAME_UP = 2,
+  FRAME_DOWN = 3
 } FRAME_DIRECTION;
 
 typedef enum kFrameType
@@ -23,7 +25,8 @@ typedef enum kFrameType
   FRAME_ICMP = 2,
   FRAME_UDP = 3,
   FRAME_TCP = 4,
-  FRAME_DHCP = 5
+  FRAME_DHCP = 5,
+  FRAME_DNS = 6
 } FRAME_TYPE;
 
 #pragma pack(push, 1)

@@ -95,7 +95,7 @@ WORD kIP_CalcChecksum(IP_HEADER* pstHeader);
 
 BOOL kIP_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kIP_GetFrameFromFrameQueue(FRAME* pstFrame);
-BOOL kIP_GetIPAddress(BYTE* pbAddress);
+DWORD kIP_GetIPAddress(BYTE* pbAddress);
 BOOL kIP_SetIPAddress(BYTE* pbAddress);
 BOOL kIP_SetGatewayIPAddress(BYTE* pbAddress);
 

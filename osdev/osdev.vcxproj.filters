@@ -229,6 +229,9 @@
     <ClCompile Include="02.Kernel64\Source\DHCP.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\DNS.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -464,6 +467,9 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\DHCP.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\DNS.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

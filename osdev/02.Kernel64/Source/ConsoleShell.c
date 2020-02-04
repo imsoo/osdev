@@ -24,6 +24,7 @@
 #include "ICMP.h"
 #include "UDP.h"
 #include "DHCP.h"
+#include "DNS.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -1558,10 +1559,17 @@ static void kTest(const char* pcParameterBuffer)
   }
 
   if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+    (QWORD)kDNS_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kDNS_Task Fail\n");
+  }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
     (QWORD)kDHCP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kDHCP_Task Fail\n");
   }
+
 }
 
 static void kTestSend(const char* pcParameterBuffer)
@@ -1570,7 +1578,20 @@ static void kTestSend(const char* pcParameterBuffer)
   // kICMP_SendEcho(0xACD9A144);
 
   // Gateway
-  kICMP_SendEcho(0x0A000202);
+  // kICMP_SendEcho(0x0A000202);
+
+  PARAMETERLIST stList;
+  char vcArgumentString[1024];
+
+  kInitializeParameter(&stList, pcParameterBuffer);
+  if (kGetNextParameter(&stList, vcArgumentString) == 0)
+  {
+    kPrintf("ex)s target\n");
+    return;
+  }
+
+  kPrintf("Send DNS | %s\n", vcArgumentString);
+  kDNS_SendDNSQuery(vcArgumentString);
 }
 
 static void kShowARPState(const char* pcParameterBuffer)
