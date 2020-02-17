@@ -72,3 +72,9 @@ BOOL kGetQueue(QUEUE* pstQueue, void* pvData)
 
   return TRUE;
 }
+
+int kGetQueueSize(QUEUE* pstQueue)
+{
+  int diff = pstQueue->iGetIndex - pstQueue->iPutIndex;
+  return (diff > 0) ? diff : -diff;
+}

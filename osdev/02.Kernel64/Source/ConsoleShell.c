@@ -82,7 +82,7 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
   { "i", "InitEthernet(temp)" , kTest },
   { "s", "send ARP(temp)" , kTestSend },
-  { "arp", "Print ARP Table" , kShowARPState },
+  { "print", "Print" , kShowARPState },
   { "ipconfig", "Print IP Configuration", kShowDHCPState },
 };
 
@@ -1527,44 +1527,44 @@ static void kExecuteApplicationProgram(const char* pcParameterBuffer)
 
 static void kTest(const char* pcParameterBuffer)
 {
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kEthernet_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kEthernet_Task Fail\n");
     return;
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kARP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kInternet_Task Fail\n");
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kIP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kIP_Task Fail\n");
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kICMP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kICMP_Task Fail\n");
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kUDP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kUDP_Task Fail\n");
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kDNS_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kDNS_Task Fail\n");
   }
 
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_LOW, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kDHCP_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kDHCP_Task Fail\n");
@@ -1582,6 +1582,8 @@ static void kTestSend(const char* pcParameterBuffer)
 
   PARAMETERLIST stList;
   char vcArgumentString[1024];
+  char vcResult[1024];
+  int ret = 0;
 
   kInitializeParameter(&stList, pcParameterBuffer);
   if (kGetNextParameter(&stList, vcArgumentString) == 0)
@@ -1591,12 +1593,22 @@ static void kTestSend(const char* pcParameterBuffer)
   }
 
   kPrintf("Send DNS | %s\n", vcArgumentString);
-  kDNS_SendDNSQuery(vcArgumentString);
+
+  ret = kDNS_GetAddress(vcArgumentString, vcResult);
+  if (ret == DNS_NOERROR) {
+    kPrintf("DNS | NOERROR : \n");
+    kPrintIPAddress(vcResult);
+    kPrintf("\n");
+  }
+  else {
+    kPrintf("DNS | ERROR : \n");
+  }
 }
 
 static void kShowARPState(const char* pcParameterBuffer)
 {
   kARPTable_Print();
+  kDNSCache_Print();
 }
 
 static void kShowDHCPState(const char* pcParameterBuffer)
