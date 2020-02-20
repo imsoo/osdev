@@ -27,7 +27,6 @@ void kUDP_Task(void)
   {
     // 큐 확인
     if (kUDP_GetFrameFromFrameQueue(&stFrame) == FALSE) {
-      kSleep(0);
       continue;
     }
 
@@ -63,10 +62,6 @@ void kUDP_Task(void)
       stUDPHeader.wDestinationPort = htons(stFrame.dwDestPort);
       stUDPHeader.wSourcePort = htons(stFrame.dwDestPort >> 16);
       stUDPHeader.wLength = htons(sizeof(UDP_HEADER) + stFrame.wLen);
-
-      kNumberToAddressArray(stPseudoHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
-      kNumberToAddressArray(stPseudoHeader.vbSourceIPAddress, stFrame.qwDestAddress >> 32, 4);
-      stPseudoHeader.wUDPLength = htons(stUDPHeader.wLength);
 
       // 체크섬 계산
       stUDPHeader.wChecksum = 0x0000;

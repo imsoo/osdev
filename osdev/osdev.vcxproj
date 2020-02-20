@@ -137,6 +137,7 @@
     <ClCompile Include="02.Kernel64\Source\Synchronization.c" />
     <ClCompile Include="02.Kernel64\Source\SystemCall.c" />
     <ClCompile Include="02.Kernel64\Source\Task.c" />
+    <ClCompile Include="02.Kernel64\Source\TCP.c" />
     <ClCompile Include="02.Kernel64\Source\UDP.c" />
     <ClCompile Include="02.Kernel64\Source\Utility.c" />
     <ClCompile Include="02.Kernel64\Source\VBE.c" />
@@ -222,6 +223,7 @@
     <ClInclude Include="02.Kernel64\Source\SystemCall.h" />
     <ClInclude Include="02.Kernel64\Source\SystemCallList.h" />
     <ClInclude Include="02.Kernel64\Source\Task.h" />
+    <ClInclude Include="02.Kernel64\Source\TCP.h" />
     <ClInclude Include="02.Kernel64\Source\Types.h" />
     <ClInclude Include="02.Kernel64\Source\UDP.h" />
     <ClInclude Include="02.Kernel64\Source\Utility.h" />

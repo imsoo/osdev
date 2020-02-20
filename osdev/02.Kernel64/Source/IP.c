@@ -4,6 +4,7 @@
 #include "Ethernet.h"
 #include "ARP.h"
 #include "ICMP.h"
+#include "TCP.h"
 #include "UDP.h"
 
 static IPMANAGER gs_stIPManager = { 0, };
@@ -53,6 +54,9 @@ void kIP_Task(void)
       {
         break;
       }
+      // 위쪽으로 근원지 | 목적지 주소 전달
+      stFrame.qwDestAddress = ((kAddressArrayToNumber(stIPHeader.vbSourceIPAddress, 4) << 32) | 
+        kAddressArrayToNumber(stIPHeader.vbDestinationIPAddress, 4));
 
       // IP 버전 확인
       if ((stIPHeader.bVersionAndIHL >> IP_VERSION_SHIFT) != IP_VERSION_IPV4) {
@@ -75,6 +79,7 @@ void kIP_Task(void)
           gs_stIPManager.pfSideOutICMP(stFrame);
           break;
         case IP_PROTOCOL_TCP:
+          gs_stIPManager.pfUpTCP(stFrame);
           break;
         case IP_PROTOCOL_UDP:
           gs_stIPManager.pfUpUDP(stFrame);
@@ -136,29 +141,27 @@ void kIP_Task(void)
         break;
 
       case FRAME_ICMP:
-        // IP 헤더 추가
-        stIPHeader.wIdentification = htons(gs_stIPManager.wIdentification++);
-        stIPHeader.bProtocol = IP_PROTOCOL_ICMP;
-        stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
-        kMemCpy(stIPHeader.vbSourceIPAddress, gs_stIPManager.vbIPAddress, 4);
-        kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
-        stIPHeader.wHeaderChecksum = htons(kIP_CalcChecksum(&stIPHeader));
-
-        // 캡슐화
-        kEncapuslationFrame(&stFrame, &stIPHeader, sizeof(IP_HEADER), NULL, 0);
-
-        // 하위 레이어로 전송
-        stFrame.bType = FRAME_IP;
-        kIP_PutFrameToFrameQueue(&stFrame);
-        break;
-
       case FRAME_UDP:
+      case FRAME_TCP:
+        stIPHeader.bProtocol = stFrame.bType;
+
         // IP 헤더 추가
         stIPHeader.wIdentification = htons(gs_stIPManager.wIdentification++);
-        stIPHeader.bProtocol = IP_PROTOCOL_UDP;
         stIPHeader.wTotalLength = htons(stFrame.wLen + sizeof(IP_HEADER));
-        kNumberToAddressArray(stIPHeader.vbSourceIPAddress, stFrame.qwDestAddress >> 32, 4);
+
+        // 수신지 주소
+        // 따로 설정된 수신 IP 주소가 없는 경우 할당 받은 IP 주소를 사용 함.
+        if ((stFrame.qwDestAddress >> 32) == 0xFFFFFFFF) {
+          kMemCpy(stIPHeader.vbSourceIPAddress, gs_stIPManager.vbIPAddress, 4);
+        }
+        else {
+          kNumberToAddressArray(stIPHeader.vbSourceIPAddress, stFrame.qwDestAddress >> 32, 4);
+        }
+
+        // 목적지 주소
         kNumberToAddressArray(stIPHeader.vbDestinationIPAddress, stFrame.qwDestAddress, 4);
+
+        // 체크섬 계산
         stIPHeader.wHeaderChecksum = htons(kIP_CalcChecksum(&stIPHeader));
 
         // 캡슐화
@@ -245,7 +248,6 @@ BYTE kIP_Fragmentation(FRAME* stOriginalFrame)
 
     // checksum 재계산
     stFragmentFrameIPHeader.wHeaderChecksum = kIP_CalcChecksum(&stFragmentFrameIPHeader);
-
 
     // 캡슐화
     kEncapuslationFrame(&stFragmentFrame, &stFragmentFrameIPHeader, sizeof(IP_HEADER),
@@ -596,6 +598,7 @@ BOOL kIP_Initialize(void)
 
   // 레이어 설정
   gs_stIPManager.pfDown = kEthernet_DownDirectionPoint;
+  gs_stIPManager.pfUpTCP = kTCP_UpDirectionPoint;
   gs_stIPManager.pfUpUDP = kUDP_UpDirectionPoint;
   gs_stIPManager.pfSideOutICMP = kICMP_SideInPoint;
 

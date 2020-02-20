@@ -22,6 +22,7 @@
 #include "IP.h"
 #include "ARP.h"
 #include "ICMP.h"
+#include "TCP.h"
 #include "UDP.h"
 #include "DHCP.h"
 #include "DNS.h"
@@ -1559,6 +1560,12 @@ static void kTest(const char* pcParameterBuffer)
   }
 
   if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
+    (QWORD)kTCP_Task, TASK_LOADBALANCINGID) == NULL)
+  {
+    kPrintf("Create kTCP_Task Fail\n");
+  }
+
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
     (QWORD)kDNS_Task, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kDNS_Task Fail\n");
@@ -1584,6 +1591,7 @@ static void kTestSend(const char* pcParameterBuffer)
   char vcArgumentString[1024];
   char vcResult[1024];
   int ret = 0;
+  int i;
 
   kInitializeParameter(&stList, pcParameterBuffer);
   if (kGetNextParameter(&stList, vcArgumentString) == 0)
@@ -1603,6 +1611,8 @@ static void kTestSend(const char* pcParameterBuffer)
   else {
     kPrintf("DNS | ERROR : \n");
   }
+
+  kTCP_CreateTCB(52525, ((0xD83AC584UL << 16) | 80), TCP_ACTIVE);
 }
 
 static void kShowARPState(const char* pcParameterBuffer)

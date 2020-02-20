@@ -32,14 +32,6 @@ typedef struct kUDPHeader {
   WORD wChecksum;
 } UDP_HEADER;
 
-typedef struct kIPv4PseudoHeader {
-  BYTE vbSourceIPAddress[4];
-  BYTE vbDestinationIPAddress[4];
-  BYTE bZeroes;
-  BYTE bProtocol;
-  WORD wUDPLength;
-} IPv4Pseudo_Header;
-
 #pragma pack(pop)
 
 void kUDP_Task(void);

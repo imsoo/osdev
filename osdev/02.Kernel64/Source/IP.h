@@ -26,6 +26,14 @@
 
 #pragma pack(push, 1)
 
+typedef struct kIPv4PseudoHeader {
+  BYTE vbSourceIPAddress[4];
+  BYTE vbDestinationIPAddress[4];
+  BYTE bZeroes;
+  BYTE bProtocol;
+  WORD wLength;
+} IPv4Pseudo_Header;
+
 typedef struct kIPHeader {
   BYTE bVersionAndIHL;
   BYTE bDSCPAndECN;
@@ -63,6 +71,7 @@ typedef struct kIPManager
   QUEUE stFrameQueue;
   FRAME* pstFrameBuffer;
 
+  UpFunction pfUpTCP;
   UpFunction pfUpUDP;
   DownFunction pfDown;
   SideOutFunction pfSideOutICMP;

@@ -114,7 +114,7 @@ void kICMP_SendEcho(DWORD dwDestinationAddress)
 
   // IP·Î Àü¼Û
   stFrame.bType = FRAME_ICMP;
-  stFrame.qwDestAddress = dwDestinationAddress;
+  stFrame.qwDestAddress = ((0xFFFFFFFF << 32) | dwDestinationAddress);
   stFrame.eDirection = FRAME_OUT;
 
   kICMP_PutFrameToFrameQueue(&stFrame);

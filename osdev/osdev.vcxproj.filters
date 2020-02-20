@@ -232,6 +232,9 @@
     <ClCompile Include="02.Kernel64\Source\DNS.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="02.Kernel64\Source\TCP.c">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -470,6 +473,9 @@
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\DNS.h">
+      <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="02.Kernel64\Source\TCP.h">
       <Filter>02.Kernel64\Source</Filter>
     </ClInclude>
   </ItemGroup>

@@ -21,12 +21,12 @@ typedef enum kFrameDirection
 typedef enum kFrameType
 {
   FRAME_ARP = 0,
-  FRAME_IP = 1,
-  FRAME_ICMP = 2,
-  FRAME_UDP = 3,
-  FRAME_TCP = 4,
+  FRAME_ICMP = 1,
+  FRAME_IP = 4,
+  FRAME_TCP = 6,
   FRAME_DHCP = 5,
-  FRAME_DNS = 6
+  FRAME_DNS = 6,
+  FRAME_UDP = 17
 } FRAME_TYPE;
 
 #pragma pack(push, 1)
