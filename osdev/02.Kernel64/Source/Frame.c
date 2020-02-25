@@ -15,6 +15,28 @@ BOOL kAllocateFrame(FRAME *pstFrame)
   return TRUE;
 }
 
+BOOL kAllocateReFrame(RE_FRAME* pstReFrame, const FRAME* pstOriFrame)
+{
+  // 원본 프레임 속성 복사
+  kMemCpy(&(pstReFrame->stFrame), pstOriFrame, sizeof(FRAME));
+
+  // 재전송 프레임 버퍼 생성
+  pstReFrame->stFrame.pbBuf = kAllocateMemory(FRAME_MAX_SIZE);
+  if (pstReFrame->stFrame.pbBuf == NULL) {
+    kPrintf("kAllocateReFrame Fail");
+    return FALSE;
+  }
+
+  // 버퍼 내용 복사
+  pstReFrame->stFrame.wLen = pstOriFrame->wLen;
+  pstReFrame->stFrame.pbCur = pstReFrame->stFrame.pbBuf + FRAME_MAX_SIZE - pstReFrame->stFrame.wLen;
+  kMemCpy(pstReFrame->stFrame.pbCur, pstOriFrame->pbCur, pstReFrame->stFrame.wLen);
+
+  // 시간 설정
+  pstReFrame->qwTime = kGetTickCount() + 5000;
+  return TRUE;
+}
+
 BOOL kAllocateBiggerFrame(FRAME* pstFrame)
 {
   pstFrame->pbBuf = kAllocateMemory(8192 * 8);

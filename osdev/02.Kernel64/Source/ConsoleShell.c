@@ -82,7 +82,7 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   // Loader
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
   { "i", "InitEthernet(temp)" , kTest },
-  { "s", "send ARP(temp)" , kTestSend },
+  { "s", "send" , kTestSend },
   { "print", "Print" , kShowARPState },
   { "ipconfig", "Print IP Configuration", kShowDHCPState },
 };
@@ -1579,6 +1579,7 @@ static void kTest(const char* pcParameterBuffer)
 
 }
 
+TCP_TCB* pstTCB;
 static void kTestSend(const char* pcParameterBuffer)
 {
   // Google 
@@ -1612,13 +1613,19 @@ static void kTestSend(const char* pcParameterBuffer)
     kPrintf("DNS | ERROR : \n");
   }
 
-  kTCP_CreateTCB(52525, ((0xD83AC584UL << 16) | 80), TCP_ACTIVE);
+  // kTCP_CreateTCB(52525, ((0xD83AC584UL << 16) | 80), TCP_ACTIVE);
+  pstTCB = kTCP_CreateTCB(52525, ((0x3132a266UL << 16) | 52525), TCP_ACTIVE);
+  // kTCP_CreateTCB(52524, 0, TCP_PASSIVE);
 }
 
 static void kShowARPState(const char* pcParameterBuffer)
 {
+  BYTE* pbString = "Hello, World!";
   kARPTable_Print();
   kDNSCache_Print();
+
+  kTCP_Send(pstTCB, pbString, 15, 0);
+  // kTCP_Close(pstTCB);
 }
 
 static void kShowDHCPState(const char* pcParameterBuffer)

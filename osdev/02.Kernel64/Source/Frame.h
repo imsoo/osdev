@@ -26,7 +26,8 @@ typedef enum kFrameType
   FRAME_TCP = 6,
   FRAME_DHCP = 5,
   FRAME_DNS = 6,
-  FRAME_UDP = 17
+  FRAME_UDP = 17,
+  FRAME_PASS = 99
 } FRAME_TYPE;
 
 #pragma pack(push, 1)
@@ -38,18 +39,23 @@ typedef struct kFrame
   WORD  wLen;
   FRAME_TYPE bType;
   QWORD qwDestAddress;
-  union {
-    DWORD dwDestPort;
-    DWORD dwRetransmitCount;
-  };
+  DWORD dwDestPort;
+  DWORD dwRetransmitCount;
   FRAME_DIRECTION eDirection;
 } FRAME;
+
+typedef struct kReFrame
+{
+  QWORD qwTime;
+  FRAME stFrame;
+} RE_FRAME;
 
 #pragma pack(pop)
 
 // function
 
 BOOL kAllocateFrame(FRAME* pstFrame);
+BOOL kAllocateReFrame(RE_FRAME* pstReFrame, const FRAME* pstOriFrame);
 BOOL kAllocateBiggerFrame(FRAME* pstFrame);
 void kFreeFrame(FRAME* pstFrame);
 

@@ -18,13 +18,13 @@
 #define TCP_REQUEST_QUEUE_MAX_COUNT 100
 
 #define TCP_WINDOW_DEFAULT_SIZE 8192
+#define TCP_MSL_DEFAULT_SECOND 120
 
 typedef enum kTCPFlag
 {
   TCP_PASSIVE = 0,
   TCP_ACTIVE = 1
 } TCP_FLAG;
-
 
 typedef enum kTCPState
 {
@@ -38,12 +38,18 @@ typedef enum kTCPState
   TCP_CLOSE_WAIT    = 7,
   TCP_CLOSING       = 8,
   TCP_LAST_ACK      = 9,
-  TCP_TIME_WAIT     = 10
+  TCP_TIME_WAIT     = 10,
+  TCP_UNKNOWN       = 0xFFFF0000,
 } TCP_STATE;
 
 typedef enum kTCPRequestCode
 {
   TCP_OPEN = 0,
+  TCP_SEND = 1,
+  TCP_RECEIVE = 2,
+  TCP_CLOSE = 3,
+  TCP_ABORT = 4,
+  TCP_STATUS = 5,
 } TCP_RCODE;
 
 #pragma pack(push, 1)
@@ -52,6 +58,8 @@ typedef struct kTCPRequest {
   TCP_RCODE eCode;
   TCP_FLAG eFlag;
   QWORD qwTime;
+  BYTE* pbBuf;
+  WORD wLen;
 } TCP_REQUEST;
 
 typedef struct kTCPHeader {
@@ -69,14 +77,17 @@ typedef struct kTCPHeader {
 typedef struct kTCPControlBlock
 {
   LISTLINK stLink;
+  QWORD qwTempSocket;
 
   // 동기화 객체
   MUTEX stLock;
 
   // 상태
-  TCP_STATE eState;
+  TCP_STATE eState; // 이전 상태 (16 bits) | 현재 상태 (16 bits)
+  QWORD qwTimeWaitTime;
 
   // 송신 관련
+  QUEUE stSendQueue;
   BYTE* pbSendWindow; // 송신 윈도우
   DWORD dwSendUNA;
   DWORD dwSendNXT;
@@ -87,6 +98,7 @@ typedef struct kTCPControlBlock
   DWORD dwISS;  // 초기 송신 순서번호
 
   // 수신 관련
+  QUEUE stRecvQueue;
   BYTE* pbRecvWindow; // 수신 윈도우
   DWORD dwRecvNXT;
   DWORD dwRecvWND;
@@ -100,6 +112,10 @@ typedef struct kTCPControlBlock
   // 프레임 큐
   QUEUE stFrameQueue;
   FRAME* pstFrameBuffer;
+
+  // 재전송 프레임 큐
+  QUEUE stRetransmitFrameQueue;
+  RE_FRAME* pstRetransmitFrameBuffer;
 } TCP_TCB;
 
 typedef struct kTCPManager
@@ -129,31 +145,45 @@ BOOL kTCP_Initialize(void);
 DWORD kTCP_GetISS(void);
 
 TCP_TCB* kTCP_CreateTCB(WORD wLocalPort, QWORD qwForeignSocket, TCP_FLAG bFlag);
-BYTE kTCP_InitTCB(TCP_TCB* pstTCB);
-BYTE* kTCP_FreeTCB(TCP_TCB* pstTCB);
+BYTE kTCP_DeleteTCB(TCP_TCB* pstTCB);
 
-BYTE kTCP_PutFrameToTCB(const TCP_TCB* pstTCB, const FRAME* pstRequest);
-BYTE kTCP_GetFrameFromTCB(const TCP_TCB* pstTCB, FRAME* pstRequest);
+BYTE kTCP_PutFrameToTCB(const TCP_TCB* pstTCB, const FRAME* pstFrame);
+BYTE kTCP_GetFrameFromTCB(const TCP_TCB* pstTCB, FRAME* pstFrame);
 BYTE kTCP_PutRequestToTCB(const TCP_TCB* pstTCB, const TCP_REQUEST* pstRequest);
 BYTE kTCP_GetRequestFromTCB(const TCP_TCB* pstTCB, TCP_REQUEST* pstRequest);
 void kTCP_Machine(void);
 
+inline void kTCP_StateTransition(TCP_TCB* pstTCB, TCP_STATE eToState);
+inline TCP_STATE kTCP_GetPreviousState(const TCP_TCB* pstTCB);
+inline TCP_STATE kTCP_GetCurrentState(const TCP_TCB* pstTCB);
+
+BYTE kTCP_PutRetransmitFrameToTCB(const TCP_TCB* pstTCB, RE_FRAME* pstFrame);
+void kTCP_ProcessRetransmitQueue(const TCP_TCB* pstTCB);
+void kTCP_UpdateRetransmitQueue(const TCP_TCB* pstTCB, DWORD dwACK);
+BOOL kTCP_IsNeedRetransmit(const TCP_HEADER* pstHeader);
+BOOL kTCP_IsDuplicateSegment(const TCP_TCB* pstTCB, DWORD dwSEGLEN, DWORD dwSEGSEQ);
+void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
+void kTCP_ProcessRequest();
+
 // 인터페이스
 TCP_TCB* kTCP_Open(WORD wLocalPort, QWORD qwForeignSocket, BYTE bFlag);
-BYTE kTCP_Send(TCP_TCB* pstTCB, BYTE* bBuf, WORD wLen, BYTE bFlag);
-BYTE kTCP_Recv(TCP_TCB* pstTCB, BYTE* bBuf, WORD wLen, BYTE bFlag);
+BYTE kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+BYTE kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
 BYTE kTCP_Close(TCP_TCB* pstTCB);
 BYTE kTCP_Abort(TCP_TCB* pstTCB);
 BYTE kTCP_Status(TCP_TCB* pstTCB);
 
-BOOL kTCP_SendSegment(TCP_HEADER* pstHeader, WORD wHeaderSize, BYTE* pbPayload, WORD wPayloadLen, DWORD dwDestAddress);
+BOOL kTCP_SendSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, WORD wHeaderSize, BYTE* pbPayload, WORD wPayloadLen, DWORD dwDestAddress);
 WORD kTCP_CalcChecksum(IPv4Pseudo_Header* pstPseudo_Header, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
+void kTCP_SetHeaderSEQACK(TCP_HEADER* pstHeader, DWORD dwSEQ, DWORD dwACK);
+void kTCP_SetHeaderFlags(TCP_HEADER* pstHeader, BYTE bHeaderLen, BOOL bACK, BOOL bPSH, BOOL bRST, BOOL bSYN, BOOL bFIN);
+
 
 BOOL kTCP_UpDirectionPoint(FRAME stFrame);
 BOOL kTCP_PutFrameToFrameQueue(const FRAME* pstFrame);
 BOOL kTCP_GetFrameFromFrameQueue(FRAME* pstFrame);
 void kEncapuslationSegment(FRAME* pstFrame, BYTE* pbHeader, DWORD dwHeaderSize,
   BYTE* pbPayload, DWORD dwPayloadSize);
-void kDecapuslationSegment(FRAME* pstFrame, BYTE** ppbHeader, BYTE** ppbPayload);
+DWORD kDecapuslationSegment(FRAME* pstFrame, BYTE** ppbHeader, BYTE** ppbPayload);
 
 #endif /* __TCP_H__ */

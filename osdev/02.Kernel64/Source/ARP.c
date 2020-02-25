@@ -89,6 +89,7 @@ void kARP_Task(void)
           kEthernet_GetMACAddress(pstARPHeader->vbSenderHardwareAddress);
           kIP_GetIPAddress(pstARPHeader->vbSenderProtocolAddress);
 
+          stFrame.bType = FRAME_ARP;
           stFrame.qwDestAddress = kAddressArrayToNumber(pstARPHeader->vbTargetHardwareAddress, ARP_HARDWAREADDRESSLENGTH_ETHERNET);
           stFrame.eDirection = FRAME_OUT;
           kARP_PutFrameToFrameQueue(&stFrame);

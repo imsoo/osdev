@@ -73,6 +73,17 @@ BOOL kGetQueue(QUEUE* pstQueue, void* pvData)
   return TRUE;
 }
 
+BOOL kFrontQueue(QUEUE* pstQueue, void* pvData)
+{
+  if (kIsQueueEmpty(pstQueue) == TRUE)
+    return FALSE;
+
+  kMemCpy(pvData, (char*)pstQueue->pvQueueArray + (pstQueue->iDataSize * pstQueue->iGetIndex),
+    pstQueue->iDataSize);
+
+  return TRUE;
+}
+
 int kGetQueueSize(QUEUE* pstQueue)
 {
   int diff = pstQueue->iGetIndex - pstQueue->iPutIndex;

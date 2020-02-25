@@ -49,26 +49,31 @@ void kIP_Task(void)
       kPrintf("IP | Receive IP Datagram %x\n", pstIPHeader->bProtocol);
 
       // IP 주소 확인 (내 IP 주소, 브로드캐스트 주소 모두 아니면 버림)
-      if ((kMemCmp(stIPHeader.vbDestinationIPAddress, gs_stIPManager.vbIPAddress, 4) == 0) &&
-        (kMemCmp(stIPHeader.vbDestinationIPAddress, vbBroadcastAddress, 4) == 0))
+      if ((kMemCmp(pstIPHeader->vbDestinationIPAddress, gs_stIPManager.vbIPAddress, 4) == 0) &&
+        (kMemCmp(pstIPHeader->vbDestinationIPAddress, vbBroadcastAddress, 4) == 0))
       {
         break;
       }
+
       // 위쪽으로 근원지 | 목적지 주소 전달
-      stFrame.qwDestAddress = ((kAddressArrayToNumber(stIPHeader.vbSourceIPAddress, 4) << 32) | 
-        kAddressArrayToNumber(stIPHeader.vbDestinationIPAddress, 4));
+      stFrame.qwDestAddress = ((kAddressArrayToNumber(pstIPHeader->vbSourceIPAddress, 4) << 32) |
+        kAddressArrayToNumber(pstIPHeader->vbDestinationIPAddress, 4));
+
+      // 이더넷 패딩 제거
+      stFrame.wLen = ntohs(pstIPHeader->wTotalLength) - sizeof(IP_HEADER);
 
       // IP 버전 확인
-      if ((stIPHeader.bVersionAndIHL >> IP_VERSION_SHIFT) != IP_VERSION_IPV4) {
-        kPrintf("IP | Not Supported Version %d\n", stIPHeader.bVersionAndIHL >> IP_VERSION_SHIFT);
+      if ((pstIPHeader->bVersionAndIHL >> IP_VERSION_SHIFT) != IP_VERSION_IPV4) {
+        kPrintf("IP | Not Supported Version %d\n", pstIPHeader->bVersionAndIHL >> IP_VERSION_SHIFT);
         break;
       }
 
       // TODO : 필요 시 IP 헤더 체크섬 확인
 
-      // MF 와 Fragment Offset이 0이 아닌 경우 단편화 패킷
+      // MF 혹은 Fragment Offset이 0이 아닌 경우 단편화 패킷
       // 재조립 과정을 수행 함
-      if (ntohs(stIPHeader.wFlagsAndFragmentOffset) != 0) {
+      if (((ntohs(pstIPHeader->wFlagsAndFragmentOffset) & (1 << IP_FLAGS_MF_SHIFT)) != 0) ||
+        ((ntohs(pstIPHeader->wFlagsAndFragmentOffset) & ((1 << IP_FLAGS_MF_SHIFT) - 1)) != 0)) {
         kIP_Reassembly(&stFrame);
       }
       // 아닌 경우 상위 레이어로 전달 함.
@@ -112,7 +117,6 @@ void kIP_Task(void)
 
           // IP 목적지 주소가 255.255.255.255 브로드캐스트가 아닌 경우 게이트웨이로 전송
           if ((stFrame.qwDestAddress & 0xFFFFFFFF) != 0xFFFFFFFF) {
-
             stFrame.qwDestAddress = kAddressArrayToNumber(gs_stIPManager.vbGatewayAddress, 4);
           }
 
