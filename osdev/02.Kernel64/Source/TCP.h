@@ -15,15 +15,22 @@
 #define TCP_FLAGS_ACK_SHIFT  4
 #define TCP_FLAGS_URG_SHIFT  5
 
+#define TCP_OPTION_EOL 0
+#define TCP_OPTION_NO  1
+#define TCP_OPTION_MSS 2
+
 #define TCP_REQUEST_QUEUE_MAX_COUNT 100
 
 #define TCP_WINDOW_DEFAULT_SIZE 8192
+#define TCP_MAXIMUM_SEGMENT_SIZE 1380
+#define TCP_MINIMUM_SEGMENT_SIZE 500
 #define TCP_MSL_DEFAULT_SECOND 120
 
 typedef enum kTCPFlag
 {
   TCP_PASSIVE = 0,
-  TCP_ACTIVE = 1
+  TCP_ACTIVE = 1,
+  TCP_PUSH = 2,
 } TCP_FLAG;
 
 typedef enum kTCPState
@@ -39,7 +46,7 @@ typedef enum kTCPState
   TCP_CLOSING       = 8,
   TCP_LAST_ACK      = 9,
   TCP_TIME_WAIT     = 10,
-  TCP_UNKNOWN       = 0xFFFF0000,
+  TCP_UNKNOWN       = 11,
 } TCP_STATE;
 
 typedef enum kTCPRequestCode
@@ -52,6 +59,14 @@ typedef enum kTCPRequestCode
   TCP_STATUS = 5,
 } TCP_RCODE;
 
+typedef enum kTCPReturnCode
+{
+  TCP_RET_OK  = 1,
+  TCP_RET_ERROR_CONNECTION_DOES_NOT_EXIST = -1,
+  TCP_RET_ERROR_CONNECTION_ALREADY_EXIST = -2,
+  TCP_RET_ERROR_CONNECTION_CLOSING = -3,
+} TCP_RETCODE;
+
 #pragma pack(push, 1)
 
 typedef struct kTCPRequest {
@@ -60,6 +75,7 @@ typedef struct kTCPRequest {
   QWORD qwTime;
   BYTE* pbBuf;
   WORD wLen;
+  volatile QWORD* pqwRet;
 } TCP_REQUEST;
 
 typedef struct kTCPHeader {
@@ -96,6 +112,7 @@ typedef struct kTCPControlBlock
   DWORD dwSendWL1;
   DWORD dwSendWL2;
   DWORD dwISS;  // 초기 송신 순서번호
+  DWORD dwMSS;
 
   // 수신 관련
   QUEUE stRecvQueue;
@@ -150,7 +167,7 @@ BYTE kTCP_DeleteTCB(TCP_TCB* pstTCB);
 BYTE kTCP_PutFrameToTCB(const TCP_TCB* pstTCB, const FRAME* pstFrame);
 BYTE kTCP_GetFrameFromTCB(const TCP_TCB* pstTCB, FRAME* pstFrame);
 BYTE kTCP_PutRequestToTCB(const TCP_TCB* pstTCB, const TCP_REQUEST* pstRequest);
-BYTE kTCP_GetRequestFromTCB(const TCP_TCB* pstTCB, TCP_REQUEST* pstRequest);
+BYTE kTCP_GetRequestFromTCB(const TCP_TCB* pstTCB, TCP_REQUEST* pstRequest, BOOL bPop);
 void kTCP_Machine(void);
 
 inline void kTCP_StateTransition(TCP_TCB* pstTCB, TCP_STATE eToState);
@@ -164,11 +181,13 @@ BOOL kTCP_IsNeedRetransmit(const TCP_HEADER* pstHeader);
 BOOL kTCP_IsDuplicateSegment(const TCP_TCB* pstTCB, DWORD dwSEGLEN, DWORD dwSEGSEQ);
 void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
 void kTCP_ProcessRequest();
+void kTCP_ProcessOption(TCP_TCB* pstTCB, TCP_HEADER* pstHeader);
+inline void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, QWORD qwReturnValue);
 
 // 인터페이스
 TCP_TCB* kTCP_Open(WORD wLocalPort, QWORD qwForeignSocket, BYTE bFlag);
-BYTE kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
-BYTE kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+QWORD kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+QWORD kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
 BYTE kTCP_Close(TCP_TCB* pstTCB);
 BYTE kTCP_Abort(TCP_TCB* pstTCB);
 BYTE kTCP_Status(TCP_TCB* pstTCB);

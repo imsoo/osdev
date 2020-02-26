@@ -3,13 +3,116 @@
 #include "Utility.h"
 #include "Task.h"
 
-
 static TCPMANAGER gs_stTCPManager = { 0, };
+
+static BYTE* pbStateString[] = {
+  "TCP_CLOSED",
+  "TCP_LISTEN",
+  "TCP_SYN_SENT",
+  "TCP_SYN_RECEIVED",
+  "TCP_ESTABLISHED",
+  "TCP_FIN_WAIT_1",
+  "TCP_FIN_WAIT_2",
+  "TCP_CLOSE_WAIT",
+  "TCP_CLOSING",
+  "TCP_LAST_ACK",
+  "TCP_TIME_WAIT",
+  "TCP_UNKNOWN",
+};
+
+QWORD kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+{
+  volatile QWORD qwRet = 0;
+  TCP_REQUEST stRequest;
+  stRequest.eCode = TCP_SEND;
+  stRequest.eFlag = bFlag;
+  stRequest.pbBuf = pbBuf;
+  stRequest.wLen = wLen;
+  stRequest.pqwRet = &qwRet;
+
+  kTCP_PutRequestToTCB(pstTCB, &stRequest);
+
+  while (qwRet == 0);
+  return qwRet;
+}
+
+QWORD kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+{
+  volatile QWORD qwRet = 0;
+  TCP_REQUEST stRequest;
+  stRequest.eCode = TCP_RECEIVE;
+  stRequest.eFlag = bFlag;
+  stRequest.pbBuf = pbBuf;
+  stRequest.wLen = wLen;
+  stRequest.pqwRet = &qwRet;
+
+  kTCP_PutRequestToTCB(pstTCB, &stRequest);
+
+  while (qwRet == 0);
+  return qwRet;
+}
+
+BYTE kTCP_Close(TCP_TCB* pstTCB)
+{
+  volatile QWORD qwRet = 0;
+  TCP_REQUEST stRequest;
+  stRequest.eCode = TCP_CLOSE;
+  stRequest.pqwRet = &qwRet;
+
+  kTCP_PutRequestToTCB(pstTCB, &stRequest);
+
+  while (qwRet == 0);
+  return qwRet;
+}
+
+void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, QWORD qwReturnValue)
+{
+  if (pstRequest->pqwRet != NULL)
+    *(pstRequest->pqwRet) = qwReturnValue;
+}
+
+void kTCP_ProcessOption(TCP_TCB* pstTCB, TCP_HEADER* pstHeader)
+{
+  DWORD dwOptionLen;
+  BYTE* pbOption;
+  BYTE bKind, bLength, *pbValue;
+  dwOptionLen = (ntohs(pstHeader->wDataOffsetAndFlags) >> TCP_FLAGS_DATAOFFSET_SHIFT) * 4 - 20;
+  if (dwOptionLen > 0) {
+    pbOption = (BYTE*)pstHeader + 20;
+    while (dwOptionLen > 0) {
+      bKind = pbOption[0];
+      bLength = pbOption[1];
+      pbValue = pbOption + bLength - 2;
+
+      switch (bKind)
+      {
+      case TCP_OPTION_EOL:
+        return;
+
+      case TCP_OPTION_NO:
+        pbOption++;
+        dwOptionLen--;
+        break;
+
+      case TCP_OPTION_MSS:
+        pstTCB->dwMSS = ntohs(*((WORD*)pbValue));
+        pbOption += bLength;
+        dwOptionLen -= bLength;
+        break;
+        
+      default:
+        pbOption += bLength;
+        dwOptionLen -= bLength;
+        break;
+      }
+    }
+  }
+}
 
 void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen)
 {
   int i, j, k, l;
-  BYTE vbTemp[128];
+  BYTE vbTemp[TCP_MAXIMUM_SEGMENT_SIZE];
   BYTE vbOption[128] = { 0x02, 0x04, 0x05, 0x64 };
   TCP_HEADER stHeader = { 0, };
   BOOL bACK, bPSH, bRST, bSYN, bFIN;
@@ -92,12 +195,13 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
       pstTCB->dwIRS = dwSegmentSEQ;
 
       // 송신 윈도우 초기화
-      pstTCB->pbSendWindow = (BYTE*)kAllocateMemory(wSegmentWindow);
+      pstTCB->dwSendWND = wSegmentWindow;
+      pstTCB->pbSendWindow = (BYTE*)kAllocateMemory(pstTCB->dwSendWND);
       if (pstTCB->pbSendWindow == NULL) {
         kPrintf("kTCP_Machine | Send Window Allocate Fail\n");
         kTCP_StateTransition(pstTCB, TCP_CLOSED);
       }
-      kInitializeQueue(&(pstTCB->stSendQueue), pstTCB->pbSendWindow, wSegmentWindow, sizeof(BYTE));
+      kInitializeQueue(&(pstTCB->stSendQueue), pstTCB->pbSendWindow, pstTCB->dwSendWND, sizeof(BYTE));
 
       // --- CRITCAL SECTION BEGIN ---
       kLock(&(gs_stTCPManager.stLock));
@@ -169,17 +273,23 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
 
     // SYN 확인
     if (bSYN == TRUE) {
+      // 옵션 처리 (MSS 가져옴)
+      kTCP_ProcessOption(pstTCB, pstHeader);
+
       // RCV.NXT=SEG.SEQ+1, IRS=SEG.SEQ로 설정
       pstTCB->dwRecvNXT = dwSegmentSEQ + 1;
       pstTCB->dwIRS = dwSegmentSEQ;
+      pstTCB->dwSendWL1 = pstTCB->dwIRS;
+      pstTCB->dwSendWL2 = dwSegmentACK;
 
       // 송신 윈도우 초기화
-      pstTCB->pbSendWindow = (BYTE*)kAllocateMemory(wSegmentWindow);
+      pstTCB->dwSendWND = wSegmentWindow;
+      pstTCB->pbSendWindow = (BYTE*)kAllocateMemory(pstTCB->dwSendWND);
       if (pstTCB->pbSendWindow == NULL) {
         kPrintf("kTCP_Machine | Send Window Allocate Fail\n");
         kTCP_StateTransition(pstTCB, TCP_CLOSED);
       }
-      kInitializeQueue(&(pstTCB->stSendQueue), pstTCB->pbSendWindow, wSegmentWindow, sizeof(BYTE));
+      kInitializeQueue(&(pstTCB->stSendQueue), pstTCB->pbSendWindow, pstTCB->dwSendWND, sizeof(BYTE));
 
       // ACK 확인
       if (bACK == TRUE) {
@@ -368,16 +478,14 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
     if ((pstTCB->dwSendWL1 < dwSegmentSEQ) ||
       ((pstTCB->dwSendWL1 == dwSegmentSEQ) && (pstTCB->dwSendWL2 <= dwSegmentACK))) {
       // 송신 윈도우 갱신
-      for (i = 0; i < dwSegmentACK - pstTCB->dwSendUNA; i++) {
-        kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i);
+      for (i = 0; i < (dwSegmentACK - pstTCB->dwSendWL2); i++) {
+        kGetQueue(&(pstTCB->stSendQueue), vbTemp + i);
       }
-      pstTCB->dwSendUNA = dwSegmentACK;
 
       // SND.WND <- SEG.WND, SND.WL1 <- SEG.SEQ, SND.WL2 <- SEG.ACK
       pstTCB->dwSendWND = wSegmentWindow;
       pstTCB->dwSendWL1 = dwSegmentSEQ;
       pstTCB->dwSendWL2 = dwSegmentACK;
-      pstTCB->dwSendNXT = dwSegmentACK;
     }
 
     // Segment Data가 존재하는 경우 수신 처리
@@ -389,17 +497,7 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
       }
       // 수신 윈도우 크기 조정
       pstTCB->dwRecvWND = pstTCB->dwRecvWND - j;
-
-      // REcv 임시
-      for (i = 0; i < 32; i++) {
-        if (kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i) == FALSE) {
-          break;
-        }
-        pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + 1;
-        pstTCB->dwRecvWND = pstTCB->dwRecvWND + 1;
-      }
-      vbTemp[i] = '\0';
-      kPrintf("Recv Data : %s\n", vbTemp);
+      pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + j;
 
       // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK> 
       bACK = TRUE;
@@ -489,16 +587,14 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
     if ((pstTCB->dwSendWL1 < dwSegmentSEQ) ||
       ((pstTCB->dwSendWL1 == dwSegmentSEQ) && (pstTCB->dwSendWL2 <= dwSegmentACK))) {
       // 송신 윈도우 갱신
-      for (i = 0; i < dwSegmentACK - pstTCB->dwSendUNA; i++) {
-        kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i);
+      for (i = 0; i < (dwSegmentACK - pstTCB->dwSendWL2); i++) {
+        kGetQueue(&(pstTCB->stSendQueue), vbTemp + i);
       }
-      pstTCB->dwSendUNA = dwSegmentACK;
 
       // SND.WND <- SEG.WND, SND.WL1 <- SEG.SEQ, SND.WL2 <- SEG.ACK
       pstTCB->dwSendWND = wSegmentWindow;
       pstTCB->dwSendWL1 = dwSegmentSEQ;
       pstTCB->dwSendWL2 = dwSegmentACK;
-      pstTCB->dwSendNXT = dwSegmentACK;
     }
 
     // 송신한 FIN에 대한 응답 확인 : FIN_WAIT_2 상태로 전이 후 세그먼트 재처리
@@ -518,17 +614,7 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
       }
       // 수신 윈도우 크기 조정
       pstTCB->dwRecvWND = pstTCB->dwRecvWND - j;
-
-      // REcv 임시
-      for (i = 0; i < 32; i++) {
-        if (kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i) == FALSE) {
-          break;
-        }
-        pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + 1;
-        pstTCB->dwRecvWND = pstTCB->dwRecvWND + 1;
-      }
-      vbTemp[i] = '\0';
-      kPrintf("Recv Data : %s\n", vbTemp);
+      pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + 1;
 
       // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK> 
       bACK = TRUE;
@@ -628,16 +714,14 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
     if ((pstTCB->dwSendWL1 < dwSegmentSEQ) ||
       ((pstTCB->dwSendWL1 == dwSegmentSEQ) && (pstTCB->dwSendWL2 <= dwSegmentACK))) {
       // 송신 윈도우 갱신
-      for (i = 0; i < dwSegmentACK - pstTCB->dwSendUNA; i++) {
-        kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i);
+      for (i = 0; i < (dwSegmentACK - pstTCB->dwSendWL2); i++) {
+        kGetQueue(&(pstTCB->stSendQueue), vbTemp + i);
       }
-      pstTCB->dwSendUNA = dwSegmentACK;
 
       // SND.WND <- SEG.WND, SND.WL1 <- SEG.SEQ, SND.WL2 <- SEG.ACK
       pstTCB->dwSendWND = wSegmentWindow;
       pstTCB->dwSendWL1 = dwSegmentSEQ;
       pstTCB->dwSendWL2 = dwSegmentACK;
-      pstTCB->dwSendNXT = dwSegmentACK;
     }
 
     // Segment Data가 존재하는 경우 수신 처리
@@ -649,17 +733,7 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
       }
       // 수신 윈도우 크기 조정
       pstTCB->dwRecvWND = pstTCB->dwRecvWND - j;
-
-      // REcv 임시
-      for (i = 0; i < 32; i++) {
-        if (kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i) == FALSE) {
-          break;
-        }
-        pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + 1;
-        pstTCB->dwRecvWND = pstTCB->dwRecvWND + 1;
-      }
-      vbTemp[i] = '\0';
-      kPrintf("Recv Data : %s\n", vbTemp);
+      pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + j;
 
       // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK> 
       bACK = TRUE;
@@ -751,16 +825,14 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
     if ((pstTCB->dwSendWL1 < dwSegmentSEQ) ||
       ((pstTCB->dwSendWL1 == dwSegmentSEQ) && (pstTCB->dwSendWL2 <= dwSegmentACK))) {
       // 송신 윈도우 갱신
-      for (i = 0; i < dwSegmentACK - pstTCB->dwSendUNA; i++) {
-        kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i);
+      for (i = 0; i < (dwSegmentACK - pstTCB->dwSendWL2); i++) {
+        kGetQueue(&(pstTCB->stSendQueue), vbTemp + i);
       }
-      pstTCB->dwSendUNA = dwSegmentACK;
 
       // SND.WND <- SEG.WND, SND.WL1 <- SEG.SEQ, SND.WL2 <- SEG.ACK
       pstTCB->dwSendWND = wSegmentWindow;
       pstTCB->dwSendWL1 = dwSegmentSEQ;
       pstTCB->dwSendWL2 = dwSegmentACK;
-      pstTCB->dwSendNXT = dwSegmentACK;
     }
 
     // Segment Data가 존재하는 경우 수신 처리
@@ -772,17 +844,7 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
       }
       // 수신 윈도우 크기 조정
       pstTCB->dwRecvWND = pstTCB->dwRecvWND - j;
-
-      // REcv 임시
-      for (i = 0; i < 32; i++) {
-        if (kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i) == FALSE) {
-          break;
-        }
-        pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + 1;
-        pstTCB->dwRecvWND = pstTCB->dwRecvWND + 1;
-      }
-      vbTemp[i] = '\0';
-      kPrintf("Recv Data : %s\n", vbTemp);
+      pstTCB->dwRecvNXT = pstTCB->dwRecvNXT + j;
 
       // <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK> 
       bACK = TRUE;
@@ -860,16 +922,14 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
     if ((pstTCB->dwSendWL1 < dwSegmentSEQ) ||
       ((pstTCB->dwSendWL1 == dwSegmentSEQ) && (pstTCB->dwSendWL2 <= dwSegmentACK))) {
       // 송신 윈도우 갱신
-      for (i = 0; i < dwSegmentACK - pstTCB->dwSendUNA; i++) {
-        kGetQueue(&(pstTCB->stRecvQueue), vbTemp + i);
+      for (i = 0; i < (dwSegmentACK - pstTCB->dwSendWL2); i++) {
+        kGetQueue(&(pstTCB->stSendQueue), vbTemp + i);
       }
-      pstTCB->dwSendUNA = dwSegmentACK;
 
       // SND.WND <- SEG.WND, SND.WL1 <- SEG.SEQ, SND.WL2 <- SEG.ACK
       pstTCB->dwSendWND = wSegmentWindow;
       pstTCB->dwSendWL1 = dwSegmentSEQ;
       pstTCB->dwSendWL2 = dwSegmentACK;
-      pstTCB->dwSendNXT = dwSegmentACK;
     }
 
     // 송신한 FIN에 대한 응답 확인 : TIME_WAIT 상태로 전이 후 세그먼트 재처리
@@ -1132,14 +1192,17 @@ BYTE kTCP_PutRequestToTCB(const TCP_TCB* pstTCB, const TCP_REQUEST* pstRequest)
   return bResult;
 }
 
-BYTE kTCP_GetRequestFromTCB(const TCP_TCB* pstTCB, TCP_REQUEST* pstRequest)
+BYTE kTCP_GetRequestFromTCB(const TCP_TCB* pstTCB, TCP_REQUEST* pstRequest, BOOL bPop)
 {
   BYTE bResult;
 
   // --- CRITCAL SECTION BEGIN ---
   kLock(&(pstTCB->stLock));
 
-  bResult = kGetQueue(&(pstTCB->stRequestQueue), pstRequest);
+  if (bPop == TRUE)
+    bResult = kGetQueue(&(pstTCB->stRequestQueue), pstRequest);
+  else 
+    bResult = kFrontQueue(&(pstTCB->stRequestQueue), pstRequest);
 
   kUnlock(&(pstTCB->stLock));
   // --- CRITCAL SECTION END ---
@@ -1267,6 +1330,7 @@ TCP_TCB* kTCP_CreateTCB(WORD wLocalPort, QWORD qwForeignSocket, TCP_FLAG eFlag)
   // Request 삽입
   stRequest.eCode = TCP_OPEN;
   stRequest.eFlag = eFlag;
+  stRequest.pqwRet = NULL;
   kTCP_PutRequestToTCB(pstTCB, &stRequest);
   
   // TCB 담당 상태 머신 생성
@@ -1439,29 +1503,6 @@ BOOL kTCP_IsDuplicateSegment(const TCP_TCB* pstTCB, DWORD dwSEGLEN, DWORD dwSEGS
   return FALSE;
 }
 
-BYTE kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
-{
-  TCP_REQUEST stRequest;
-  stRequest.eCode = TCP_SEND;
-  stRequest.eFlag = bFlag;
-  stRequest.pbBuf = (BYTE*)kAllocateMemory(wLen);
-  if (stRequest.pbBuf == NULL) {
-    return FALSE;
-  }
-  kMemCpy(stRequest.pbBuf, pbBuf, wLen);
-  stRequest.wLen = wLen;
-
-  kTCP_PutRequestToTCB(pstTCB, &stRequest);
-}
-
-BYTE kTCP_Close(TCP_TCB* pstTCB)
-{
-  TCP_REQUEST stRequest;
-  stRequest.eCode = TCP_CLOSE;
-
-  kTCP_PutRequestToTCB(pstTCB, &stRequest);
-}
-
 TCP_STATE kTCP_GetPreviousState(const TCP_TCB* pstTCB)
 {
   return (pstTCB->eState >> 16);
@@ -1489,7 +1530,7 @@ void kTCP_Machine(void)
   TCP_HEADER stHeader = { 0, };
   TCP_HEADER* pstHeader;
   BYTE *pbPayload;
-  BYTE vbTemp[128];
+  BYTE vbTemp[TCP_MAXIMUM_SEGMENT_SIZE];
   BYTE vbOption[128] = { 0x02, 0x04, 0x05, 0x64 };
 
   BOOL bRequest, bFrame;
@@ -1514,7 +1555,7 @@ void kTCP_Machine(void)
   while (1)
   {
     if ((kGetTickCount() - qwTime) >= 5000) {
-      kPrintf("TCP_Machine Socket : %q | State : %d\n", pstTCB->stLink.qwID, pstTCB->eState);
+      kPrintf("TCP_Machine Socket : %q | State : %s\n", pstTCB->stLink.qwID, pbStateString[pstTCB->eState]);
       qwTime = kGetTickCount();
     }
 
@@ -1529,7 +1570,7 @@ void kTCP_Machine(void)
     kTCP_ProcessRetransmitQueue(pstTCB);
 
     // 요청 처리
-    bRequest = kTCP_GetRequestFromTCB(pstTCB, &stRequest);
+    bRequest = kTCP_GetRequestFromTCB(pstTCB, &stRequest, FALSE);
     // 요청이 있는 경우
     if (bRequest) {
       switch (kTCP_GetCurrentState(pstTCB))
@@ -1561,9 +1602,16 @@ void kTCP_Machine(void)
             // SYN_SENT 상태로 전이
             kTCP_StateTransition(pstTCB, TCP_SYN_SENT);
           }
+
+          // TCB 반환
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, pstTCB);
           break;
+
           // 나머지 : Error
-        default:
+        default: /* return “error: connection does not exist” */
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_DOES_NOT_EXIST);
           break;
         }
         break;  /* TCP_CLOSED */
@@ -1572,32 +1620,105 @@ void kTCP_Machine(void)
         break;  /* TCP_LISTEN */
 
       case TCP_SYN_SENT:
+        switch (stRequest.eCode)
+        {
+          // Open Call 처리
+        case TCP_OPEN:  /* Return “error: connection already exists” */
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_ALREADY_EXIST);
+          break;
+
+          // Send, Recv : 요청 처리 안함. 
+        case TCP_SEND:
+        case TCP_RECEIVE:
+          break;
+        }
         break;  /* TCP_SYN_SENT */
 
       case TCP_ESTABLISHED:
         switch (stRequest.eCode)
         {
         case TCP_SEND:
+          // 윈도우 닫힌 경우 블락 : Keep Alive Segment 전송하여 윈도우 확인
+          // TODO : 바보 윈도우 관련 
+          if (pstTCB->dwSendWND == 0)
+          {
+            // Keep Alive (ACK) Segment 송신 (SEQ : SND.NXT - 1, ACK : RCV.NXT, CTL : ACK)
+            bACK = TRUE;
+            dwSegmentSEQ = pstTCB->dwSendNXT - 1;
+            dwSegmentACK = pstTCB->dwRecvNXT;
 
-          // 송신 윈도우 여유가 있는 경우 세그먼트로 만들어 전송
-          if (stRequest.wLen <= (pstTCB->dwSendUNA + pstTCB->dwSendWND - pstTCB->dwSendNXT)) {
+            kTCP_SetHeaderSEQACK(&stHeader, dwSegmentSEQ, dwSegmentACK);
+            kTCP_SetHeaderFlags(&stHeader, 5, bACK, 0, 0, 0, 0);
+            kTCP_SendSegment(pstTCB, &stHeader, 20, NULL, 0, dwDestAddress);
+          }
+
+          // 송신 윈도우에 삽입가능한 만큼 삽입
+          for (i = 0; i < stRequest.wLen; i++) {
+            if (kPutQueue(&(pstTCB->stSendQueue), stRequest.pbBuf + i) == FALSE)
+              break;
+          }
+
+          // PUSH 플래그 설정된 경우 OR 
+          // 임계치 만큼 데이터가 모인 경우 세그먼트로 만들어 전송
+          // 세그먼트 크기는 MSS를 넘지 않음.
+          dwSegmentLen = MIN(kGetQueueSize(&(pstTCB->stSendQueue)) - (pstTCB->dwSendNXT - pstTCB->dwSendUNA), pstTCB->dwMSS);
+          if ((stRequest.eFlag == TCP_PUSH) || (dwSegmentLen >= TCP_MINIMUM_SEGMENT_SIZE)) {
             dwSegmentSEQ = pstTCB->dwSendNXT;
             dwSegmentACK = pstTCB->dwRecvNXT;
 
-            // 송신 윈도우에 삽입
-            for (i = 0; i < stRequest.wLen; i++) {
-              kPutQueue(&(pstTCB->stSendQueue), stRequest.pbBuf + i);
+            // TODO : Deque 형태로 개선
+            // 앞에 위치한 UNA 부분 큐에서 인출하여 다시 삽입 (맨뒤로 위치)
+            k = kGetQueueSize(&(pstTCB->stSendQueue));
+            for (j = 0; j < (pstTCB->dwSendNXT - pstTCB->dwSendUNA); j++) {
+              kGetQueue(&(pstTCB->stSendQueue), &l);
+              kPutQueue(&(pstTCB->stSendQueue), &l);
             }
-            // SND.NXT 갱신
-            pstTCB->dwSendNXT = pstTCB->dwSendNXT + stRequest.wLen;
 
-            bACK = TRUE;
+            // 세그먼트로 만들 데이터 인출하여 임시버퍼에 저장 후 다시 삽입 (맨뒤로 위치)
+            for (j = 0; j < dwSegmentLen; j++) {
+              kGetQueue(&(pstTCB->stSendQueue), vbTemp + j);
+              kPutQueue(&(pstTCB->stSendQueue), vbTemp + j);
+            }
+
+            // 세그먼트로 만들지 않은 데이터 인출 후 다시 삽입 (맨뒤로 위치)
+            for (j = 0; j < (k - dwSegmentLen - (pstTCB->dwSendNXT - pstTCB->dwSendUNA)); j++) {
+              kGetQueue(&(pstTCB->stSendQueue), &l);
+              kPutQueue(&(pstTCB->stSendQueue), &l);
+            }
+
+            // SND.NXT 갱신
+            pstTCB->dwSendNXT = pstTCB->dwSendNXT + dwSegmentLen;
+
+            // 세그먼트 전송
+            bPSH = bACK = TRUE;
             kTCP_SetHeaderSEQACK(&stHeader, dwSegmentSEQ, dwSegmentACK);
-            kTCP_SetHeaderFlags(&stHeader, 5, bACK, 0, 0, 0, 0);
-            kTCP_SendSegment(pstTCB, &stHeader, 20, stRequest.pbBuf, stRequest.wLen, dwDestAddress);
+            kTCP_SetHeaderFlags(&stHeader, 5, bACK, bPSH, 0, 0, 0);
+            kTCP_SendSegment(pstTCB, &stHeader, 20, vbTemp, dwSegmentLen, dwDestAddress);
           }
 
+          // 송신 윈도우에 삽입한 만큼 반환
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, i);
           break; /* TCP_SEND */
+
+        case TCP_RECEIVE:
+          // 수신 가능한 만큼 유저 버퍼에 삽입
+          for (i = 0; i < stRequest.wLen; i++) {
+            if (kGetQueue(&(pstTCB->stRecvQueue), stRequest.pbBuf + i) == FALSE)
+              break;
+          }
+
+          // 1바이트 이상 유저 버퍼에 삽입 시 반환
+          if (i > 0) {
+            // 수신 윈도우 크기 갱신
+            pstTCB->dwRecvWND = pstTCB->dwRecvWND + i;
+
+            // 유저 버퍼에 삽입한 만큼 반환
+            kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+            kTCP_ReturnRequest(&stRequest, i);
+          }
+          break; /* TCP_RECEIVE */
 
         case TCP_CLOSE:
           // FIN Segment 송신
@@ -1613,17 +1734,149 @@ void kTCP_Machine(void)
           pstTCB->dwSendNXT = pstTCB->dwSendNXT + 1;
           // TCP_FIN_WAIT_1 상태로 전이
           kTCP_StateTransition(pstTCB, TCP_FIN_WAIT_1);
-          break; /* TCP_CLOSE */
 
-        default:
-          break;
+          // OK 반환
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_OK);
+          break; /* TCP_CLOSE */
         }
 
         break; /* TCP_ESTABLISHED */
 
+      case TCP_FIN_WAIT_1:
+      case TCP_FIN_WAIT_2:
+        switch (stRequest.eCode)
+        {
+        case TCP_OPEN:
+          //  Return “error: connection already exists”
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_ALREADY_EXIST);
+          break;
+        case TCP_SEND:
+        case TCP_CLOSE:
+          //  return “error: connection closing”
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_CLOSING);
+          break;
+
+        case TCP_RECEIVE:
+          // 수신 가능한 만큼 유저 버퍼에 삽입
+          for (i = 0; i < stRequest.wLen; i++) {
+            if (kGetQueue(&(pstTCB->stRecvQueue), stRequest.pbBuf + i) == FALSE)
+              break;
+          }
+
+          // 1바이트 이상 유저 버퍼에 삽입 시 반환
+          if (i > 0) {
+            // 수신 윈도우 크기 갱신
+            pstTCB->dwRecvWND = pstTCB->dwRecvWND + i;
+
+            // 유저 버퍼에 삽입한 만큼 반환
+            kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+            kTCP_ReturnRequest(&stRequest, i);
+          }
+
+          break; /* TCP_RECEIVE */
+        }
+
+        break; /* TCP_FIN_WAIT_1 */
+
       case TCP_CLOSE_WAIT:
         switch (stRequest.eCode)
         {
+        case TCP_OPEN:
+          //  Return “error: connection already exists”
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_ALREADY_EXIST);
+          break;
+        case TCP_SEND:
+          // 윈도우 닫힌 경우 블락 : Keep Alive Segment 전송하여 윈도우 확인
+          // TODO : 바보 윈도우 관련 
+          if (pstTCB->dwSendWND == 0)
+          {
+            // Keep Alive (ACK) Segment 송신 (SEQ : SND.NXT - 1, ACK : RCV.NXT, CTL : ACK)
+            bACK = TRUE;
+            dwSegmentSEQ = pstTCB->dwSendNXT - 1;
+            dwSegmentACK = pstTCB->dwRecvNXT;
+
+            kTCP_SetHeaderSEQACK(&stHeader, dwSegmentSEQ, dwSegmentACK);
+            kTCP_SetHeaderFlags(&stHeader, 5, bACK, 0, 0, 0, 0);
+            kTCP_SendSegment(pstTCB, &stHeader, 20, NULL, 0, dwDestAddress);
+          }
+
+          // 송신 윈도우에 삽입가능한 만큼 삽입
+          for (i = 0; i < stRequest.wLen; i++) {
+            if (kPutQueue(&(pstTCB->stSendQueue), stRequest.pbBuf + i) == FALSE)
+              break;
+          }
+
+          // PUSH 플래그 설정된 경우 OR 
+          // 임계치 만큼 데이터가 모인 경우 세그먼트로 만들어 전송
+          // 세그먼트 크기는 MSS를 넘지 않음.
+          dwSegmentLen = MIN(kGetQueueSize(&(pstTCB->stSendQueue)) - (pstTCB->dwSendNXT - pstTCB->dwSendUNA), pstTCB->dwMSS);
+          if ((stRequest.eFlag == TCP_PUSH) || (dwSegmentLen >= TCP_MINIMUM_SEGMENT_SIZE)) {
+            dwSegmentSEQ = pstTCB->dwSendNXT;
+            dwSegmentACK = pstTCB->dwRecvNXT;
+
+
+            // TODO : Deque 형태로 개선
+            // 앞에 위치한 UNA 부분 큐에서 인출하여 다시 삽입 (맨뒤로 위치)
+            k = kGetQueueSize(&(pstTCB->stSendQueue));
+            for (j = 0; j < (pstTCB->dwSendNXT - pstTCB->dwSendUNA); j++) {
+              kGetQueue(&(pstTCB->stSendQueue), &l);
+              kPutQueue(&(pstTCB->stSendQueue), &l);
+            }
+
+            // 세그먼트로 만들 데이터 인출하여 임시버퍼에 저장 후 다시 삽입 (맨뒤로 위치)
+            for (j = 0; j < dwSegmentLen; j++) {
+              kGetQueue(&(pstTCB->stSendQueue), vbTemp + j);
+              kPutQueue(&(pstTCB->stSendQueue), vbTemp + j);
+            }
+
+            // 세그먼트로 만들지 않은 데이터 인출 후 다시 삽입 (맨뒤로 위치)
+            for (j = 0; j < (k - dwSegmentLen); j++) {
+              kGetQueue(&(pstTCB->stSendQueue), &l);
+              kPutQueue(&(pstTCB->stSendQueue), &l);
+            }
+
+            // SND.NXT 갱신
+            pstTCB->dwSendNXT = pstTCB->dwSendNXT + dwSegmentLen;
+
+            // 세그먼트 전송
+            bPSH = bACK = TRUE;
+            kTCP_SetHeaderSEQACK(&stHeader, dwSegmentSEQ, dwSegmentACK);
+            kTCP_SetHeaderFlags(&stHeader, 5, bACK, bPSH, 0, 0, 0);
+            kTCP_SendSegment(pstTCB, &stHeader, 20, vbTemp, dwSegmentLen, dwDestAddress);
+          }
+
+          // 송신 윈도우에 삽입한 만큼 반환
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, i);
+          break; /* TCP_SEND */
+
+        case TCP_RECEIVE:
+          // 수신 가능한 만큼 유저 버퍼에 삽입
+          for (i = 0; i < stRequest.wLen; i++) {
+            if (kGetQueue(&(pstTCB->stRecvQueue), stRequest.pbBuf + i) == FALSE)
+              break;
+          }
+
+          // 1바이트 이상 유저 버퍼에 삽입 시 반환
+          if (i > 0) {
+            // 수신 윈도우 크기 갱신
+            pstTCB->dwRecvWND = pstTCB->dwRecvWND + i;
+
+            // 유저 버퍼에 삽입한 만큼 반환
+            kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+            kTCP_ReturnRequest(&stRequest, i);
+          }
+          else {
+            //  return “error: connection closing”
+            kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+            kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_CLOSING);
+          }
+          break; /* TCP_RECEIVE */
+
         case TCP_CLOSE:
           // FIN Segment 송신
           bACK = bFIN = TRUE;
@@ -1638,14 +1891,36 @@ void kTCP_Machine(void)
           pstTCB->dwSendNXT = pstTCB->dwSendNXT + 1;
           // TCP_LAST_ACK 상태로 전이
           kTCP_StateTransition(pstTCB, TCP_LAST_ACK);
-          break; /* TCP_CLOSE */
-        default:
-          break; /* TCP_CLOSE_WAIT */
-        }
-        break;
 
-      default:
-        break;
+          // OK 반환
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_OK);
+          break; /* TCP_CLOSE */
+        }
+
+        break; /* TCP_CLOSE_WAIT */
+
+      case TCP_CLOSING:
+      case TCP_LAST_ACK:
+      case TCP_TIME_WAIT:
+        switch (stRequest.eCode)
+        {
+        case TCP_OPEN:
+          //  Return “error: connection already exists”
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_ALREADY_EXIST);
+          break;
+        case TCP_SEND:
+        case TCP_CLOSE:
+        case TCP_RECEIVE:
+          //  return “error: connection closing”
+          kTCP_GetRequestFromTCB(pstTCB, &stRequest, TRUE);
+          kTCP_ReturnRequest(&stRequest, TCP_RET_ERROR_CONNECTION_CLOSING);
+          break;
+        }
+
+        break; /* TCP_TIME_WAIT */
+
       } /* switch (pstTCB->eState) */
     } /* if (bRequest) */
 
@@ -1703,6 +1978,7 @@ BOOL kTCP_SendSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, WORD wHeaderSize, 
   stPseudoHeader.bProtocol = IP_PROTOCOL_TCP;
   stPseudoHeader.wLength = htons(wHeaderSize + wPayloadLen);
 
+  pstHeader->wWindow = htons(pstTCB->dwRecvWND);
   pstHeader->wChecksum = htons(kTCP_CalcChecksum(&stPseudoHeader, pstHeader, pbPayload, wPayloadLen));
 
   kEncapuslationSegment(&stFrame, pstHeader, wHeaderSize, pbPayload, wPayloadLen);
