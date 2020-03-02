@@ -45,7 +45,7 @@ void kEthernet_Task(void)
     case FRAME_UP:
       kDecapuslationFrame(&stFrame, &pstEthernetHeader, sizeof(ETHERNET_HEADER), &pbEthernetPayload);
 
-      kPrintf("Ethernet | Receive Frame | wType : %x\n", pstEthernetHeader->wType);
+      // kPrintf("Ethernet | Receive Frame | wType : %x\n", pstEthernetHeader->wType);
 
 
       if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_ARP) {
@@ -59,7 +59,7 @@ void kEthernet_Task(void)
       }
       break;  /* End of case FRAME_UP */
     case FRAME_DOWN:
-      kPrintf("Ethernet | Send Frame | bType : %x\n", stFrame.bType);
+      // kPrintf("Ethernet | Send Frame | bType : %x\n", stFrame.bType);
 
       switch (stFrame.bType)
       {

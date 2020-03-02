@@ -96,6 +96,7 @@ static void kShowVBEModeInfo(const char* pcParameterBuffer);
 static void kExecuteApplicationProgram(const char* pcParameterBuffer);
 
 // ETC
+static void kTelnetC(const char* pcParameterBuffer);
 static void kTest(const char* pcParameterBuffer);
 static void kTestSend(const char* pcParameterBuffer);
 static void kShowARPState(const char* pcParameterBuffer);

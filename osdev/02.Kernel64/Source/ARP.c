@@ -29,12 +29,12 @@ void kARP_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_OUT:
-      kPrintf("ARP | Send ARP Packet\n");
+      // kPrintf("ARP | Send ARP Packet\n");
 
       gs_stARPManager.pfSideOut(stFrame);
       break;
     case FRAME_IN:
-      kPrintf("ARP | Receive ARP Packet\n");
+      // kPrintf("ARP | Receive ARP Packet\n");
 
       kDecapuslationFrame(&stFrame, &pstARPHeader, sizeof(ARPMANAGER), NULL);
 
@@ -63,7 +63,7 @@ void kARP_Task(void)
 
         // 새 테이블 엔트리 삽입
         if (bMergeFlag == FALSE) {
-          kPrintf("ARP | New Entry\n");
+          // kPrintf("ARP | New Entry\n");
           pstEntry = (ARP_ENTRY*)kAllocateMemory(sizeof(ARP_ENTRY));
           if (pstEntry == NULL) {
             return FALSE;

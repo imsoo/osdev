@@ -221,6 +221,32 @@ BYTE kGetCh(void)
 }
 
 /*
+  getch (non-block);
+*/
+BYTE kGetChNonBlock(void)
+{
+  KEYDATA stData;
+
+  if (kIsGraphicMode() == FALSE) {
+    // wait 
+    if (kGetKeyFromKeyQueue(&stData) == FALSE)
+      return 0xFF;
+  }
+  else {
+    // wait 
+    if (kGetKeyFromGUIKeyQueue(&stData) == FALSE)
+      return 0xFF;
+  }
+
+  // if key down
+  if (stData.bFlags & KEY_FLAGS_DOWN)
+  {
+    return stData.bASCIICode;
+  }
+  return 0xFF;
+}
+
+/*
   Print string 
 */
 void kPrintStringXY(int iX, int iY, const char* pcString)

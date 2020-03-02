@@ -20,9 +20,9 @@ static BYTE* pbStateString[] = {
   "TCP_UNKNOWN",
 };
 
-QWORD kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+long kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
 {
-  volatile QWORD qwRet = 0;
+  volatile long qwRet = 0;
   TCP_REQUEST stRequest;
   stRequest.eCode = TCP_SEND;
   stRequest.eFlag = bFlag;
@@ -36,9 +36,9 @@ QWORD kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
   return qwRet;
 }
 
-QWORD kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+long kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
 {
-  volatile QWORD qwRet = 0;
+  volatile long qwRet = 0xFFFFFFFF;
   TCP_REQUEST stRequest;
   stRequest.eCode = TCP_RECEIVE;
   stRequest.eFlag = bFlag;
@@ -48,13 +48,13 @@ QWORD kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
 
   kTCP_PutRequestToTCB(pstTCB, &stRequest);
 
-  while (qwRet == 0);
+  while (qwRet == 0xFFFFFFFF);
   return qwRet;
 }
 
 BYTE kTCP_Close(TCP_TCB* pstTCB)
 {
-  volatile QWORD qwRet = 0;
+  volatile long qwRet = 0;
   TCP_REQUEST stRequest;
   stRequest.eCode = TCP_CLOSE;
   stRequest.pqwRet = &qwRet;
@@ -65,7 +65,7 @@ BYTE kTCP_Close(TCP_TCB* pstTCB)
   return qwRet;
 }
 
-void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, QWORD qwReturnValue)
+void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, long qwReturnValue)
 {
   if (pstRequest->pqwRet != NULL)
     *(pstRequest->pqwRet) = qwReturnValue;
@@ -136,7 +136,7 @@ void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload
   dwSegmentACK = ntohl(pstHeader->dwAcknowledgmentNumber);
   wSegmentWindow = ntohs(pstHeader->wWindow);
 
-  kPrintf("TCP | SEQ : %p, ACK : %p, SEG.LEN : %d | A[%d] P[%d] R[%d] S[%d] F[%d]\n", dwSegmentSEQ, dwSegmentACK, wPayloadLen, bACK, bPSH, bRST, bSYN, bFIN);
+  // kPrintf("TCP | SEQ : %p, ACK : %p, SEG.LEN : %d | A[%d] P[%d] R[%d] S[%d] F[%d]\n", dwSegmentSEQ, dwSegmentACK, wPayloadLen, bACK, bPSH, bRST, bSYN, bFIN);
 
   switch (kTCP_GetCurrentState(pstTCB))
   {
@@ -1086,7 +1086,7 @@ void kTCP_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_UP:
-      kPrintf("TCP | Receive TCP Segment \n");
+      // kPrintf("TCP | Receive TCP Segment \n");
 
       // 세그먼트 헤더 분리
       pstHeader = (TCP_HEADER*)stFrame.pbCur;
@@ -1123,7 +1123,7 @@ void kTCP_Task(void)
       break;  /* End of case FRAME_UP: */
 
     case FRAME_DOWN:
-      kPrintf("TCP | Send TCP Segment \n");
+      // kPrintf("TCP | Send TCP Segment \n");
 
       // IP로 전송
       gs_stTCPManager.pfDownIP(stFrame);
@@ -1377,7 +1377,7 @@ BYTE kTCP_DeleteTCB(TCP_TCB* pstTCB)
   kUnlock(&(gs_stTCPManager.stLock));
   // --- CRITCAL SECTION END ---
 
-  kPrintf("Delete TCB !!!!\n");
+  // kPrintf("Delete TCB !!!!\n");
 }
 
 BYTE kTCP_PutRetransmitFrameToTCB(const TCP_TCB* pstTCB, RE_FRAME* pstFrame)
@@ -1549,13 +1549,13 @@ void kTCP_Machine(void)
   stHeader.pbOption = vbOption;
   dwDestAddress = (pstTCB->stLink.qwID >> 32);
 
-  kPrintf("kTCP_Machine\n");
+  // kPrintf("kTCP_Machine\n");
 
   qwTime = kGetTickCount();
   while (1)
   {
     if ((kGetTickCount() - qwTime) >= 5000) {
-      kPrintf("TCP_Machine Socket : %q | State : %s\n", pstTCB->stLink.qwID, pbStateString[pstTCB->eState]);
+      // kPrintf("TCP_Machine Socket : %q | State : %s\n", pstTCB->stLink.qwID, pbStateString[pstTCB->eState]);
       qwTime = kGetTickCount();
     }
 
@@ -1708,9 +1708,8 @@ void kTCP_Machine(void)
             if (kGetQueue(&(pstTCB->stRecvQueue), stRequest.pbBuf + i) == FALSE)
               break;
           }
-
-          // 1바이트 이상 유저 버퍼에 삽입 시 반환
-          if (i > 0) {
+          // 1바이트 이상 유저 버퍼에 삽입 시 반환 OR NONBLOCK 요청인 경우
+          if ((i > 0) || (stRequest.eFlag == TCP_NONBLOCK)) {
             // 수신 윈도우 크기 갱신
             pstTCB->dwRecvWND = pstTCB->dwRecvWND + i;
 
@@ -1766,8 +1765,8 @@ void kTCP_Machine(void)
               break;
           }
 
-          // 1바이트 이상 유저 버퍼에 삽입 시 반환
-          if (i > 0) {
+          // 1바이트 이상 유저 버퍼에 삽입 시 반환 OR NONBLOCK 요청인 경우
+          if ((i > 0) || (stRequest.eFlag == TCP_NONBLOCK)) {
             // 수신 윈도우 크기 갱신
             pstTCB->dwRecvWND = pstTCB->dwRecvWND + i;
 
@@ -2039,8 +2038,8 @@ WORD kTCP_CalcChecksum(IPv4Pseudo_Header* pstPseudo_Header, TCP_HEADER* pstHeade
   }
 
   // 마지막 한바이트 남은 경우
-  if (((wPayloadLen / 2) * 2) != wPayloadLen) {
-    dwSum += ntohs((pwP[wPayloadLen / 2]) & 0xFF00);
+  if ((wPayloadLen != 0) && (((wPayloadLen / 2) * 2) != wPayloadLen)) {
+    dwSum += ntohs((pwP[wPayloadLen / 2]) & 0x00FF);
   }
 
   if (dwSum > 0xFFFF) {

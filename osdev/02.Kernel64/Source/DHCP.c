@@ -281,7 +281,7 @@ void kDHCP_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_UP:
-      kPrintf("DHCP | Receive DHCP Packet \n");
+      // kPrintf("DHCP | Receive DHCP Packet \n");
       kDecapuslationFrame(&stFrame, &pstDHCPHeader, sizeof(DHCP_Header), NULL);
 
       switch (gs_stDHCPManager.eState)
@@ -418,7 +418,7 @@ void kDHCP_Task(void)
 
       break;  /* End of case FRAME_UP: */
     case FRAME_DOWN:
-      kPrintf("DHCP | Send DHCP Packet\n");
+      // kPrintf("DHCP | Send DHCP Packet\n");
       gs_stDHCPManager.pfDownUDP(stFrame);
       break;  /* End of case FRAME_DOWN: */
     }

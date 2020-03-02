@@ -31,6 +31,7 @@ typedef enum kTCPFlag
   TCP_PASSIVE = 0,
   TCP_ACTIVE = 1,
   TCP_PUSH = 2,
+  TCP_NONBLOCK = 3,
 } TCP_FLAG;
 
 typedef enum kTCPState
@@ -75,7 +76,7 @@ typedef struct kTCPRequest {
   QWORD qwTime;
   BYTE* pbBuf;
   WORD wLen;
-  volatile QWORD* pqwRet;
+  volatile long* pqwRet;
 } TCP_REQUEST;
 
 typedef struct kTCPHeader {
@@ -182,12 +183,12 @@ BOOL kTCP_IsDuplicateSegment(const TCP_TCB* pstTCB, DWORD dwSEGLEN, DWORD dwSEGS
 void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
 void kTCP_ProcessRequest();
 void kTCP_ProcessOption(TCP_TCB* pstTCB, TCP_HEADER* pstHeader);
-inline void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, QWORD qwReturnValue);
+inline void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, long qwReturnValue);
 
 // 인터페이스
 TCP_TCB* kTCP_Open(WORD wLocalPort, QWORD qwForeignSocket, BYTE bFlag);
-QWORD kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
-QWORD kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+long kTCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+long kTCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
 BYTE kTCP_Close(TCP_TCB* pstTCB);
 BYTE kTCP_Abort(TCP_TCB* pstTCB);
 BYTE kTCP_Status(TCP_TCB* pstTCB);

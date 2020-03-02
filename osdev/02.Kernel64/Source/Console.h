@@ -80,6 +80,7 @@ void kPrintf(const char* pcFormatString, ...);
 int kConsolePrintString(const char* pcBuffer);
 void kClearScreen(void);
 BYTE kGetCh(void);
+BYTE kGetChNonBlock(void);
 void kPrintStringXY(int iX, int iY, const char* pcString);
 
 // Console Manager

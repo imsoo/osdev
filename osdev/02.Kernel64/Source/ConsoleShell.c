@@ -26,6 +26,7 @@
 #include "UDP.h"
 #include "DHCP.h"
 #include "DNS.h"
+#include "Telnet.h"
 
 // Command Table
 SHELLCOMMANDENTRY gs_vstCommandTable[] =
@@ -53,7 +54,7 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   { "hddinfo", "Show HDD Information", kShowHDDInformation },
   { "readsector", "Read HDD Sector, ex)readsector 0(LBA) 10(count)", kReadSector },
   { "writesector", "Write HDD Sector, ex)writesector 0(LBA) 10(count)", kWriteSector },
-  
+
   // FileSystem
   { "mounthdd", "Mount HDD", kMountHDD },
   { "formathdd", "Format HDD", kFormatHDD },
@@ -82,6 +83,9 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   // Loader
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
   { "i", "InitEthernet(temp)" , kTest },
+
+  // Network
+  { "telnet", "telnet <ip> <port>", kTelnetC },
   { "s", "send" , kTestSend },
   { "print", "Print" , kShowARPState },
   { "ipconfig", "Print IP Configuration", kShowDHCPState },
@@ -1524,6 +1528,49 @@ static void kExecuteApplicationProgram(const char* pcParameterBuffer)
   // Create Task
   qwID = kExecuteProgram(vcFileName, vcArgumentString, TASK_LOADBALANCINGID);
   kPrintf("Task ID = 0x%Q\n", qwID);
+}
+
+static void kTelnetC(const char* pcParameterBuffer)
+{
+  PARAMETERLIST stList;
+  char vcIP[20];
+  char vcPort[10];
+  DWORD dwIP;
+  WORD wPort;
+  char* pcTemp;
+  BYTE bTemp;
+
+  kInitializeParameter(&stList, pcParameterBuffer);
+  if (kGetNextParameter(&stList, vcIP) == 0)
+  {
+    kPrintf("ex)telnet <ip-addr> <port>\n");
+    return;
+  }
+
+  // IP 주소 정수로 변환
+  dwIP = 0;
+  pcTemp = vcIP;
+  bTemp = 0;
+  while (*pcTemp != '\0') {
+    if (*pcTemp == '.') {
+      dwIP = (dwIP << 8) + bTemp;
+      bTemp = 0;
+    }
+    else {
+      bTemp = (bTemp * 10) + (*pcTemp - '0');
+    }
+    pcTemp++;
+  }
+  dwIP = (dwIP << 8) + bTemp;
+
+  if (kGetNextParameter(&stList, vcPort) == 0)
+  {
+    kPrintf("ex)telnet <ip-addr> <port>\n");
+    return;
+  }
+  wPort = kAToI(vcPort, 10);
+
+  kTelent_SimpleClient(dwIP, wPort);
 }
 
 static void kTest(const char* pcParameterBuffer)

@@ -46,7 +46,7 @@ void kIP_Task(void)
     case FRAME_UP:
       kDecapuslationFrame(&stFrame, &pstIPHeader, sizeof(IP_HEADER), &pbIPPayload);
 
-      kPrintf("IP | Receive IP Datagram %x\n", pstIPHeader->bProtocol);
+      // kPrintf("IP | Receive IP Datagram %x\n", pstIPHeader->bProtocol);
 
       // IP 주소 확인 (내 IP 주소, 브로드캐스트 주소 모두 아니면 버림)
       if ((kMemCmp(pstIPHeader->vbDestinationIPAddress, gs_stIPManager.vbIPAddress, 4) == 0) &&
@@ -105,7 +105,7 @@ void kIP_Task(void)
       switch (stFrame.bType)
       {
       case FRAME_IP:
-        kPrintf("IP | Send IP Datagram \n");
+        // kPrintf("IP | Send IP Datagram \n");
         pstIPHeader = (IP_HEADER*)stFrame.pbCur;
 
         // IP 데이터그램의 크기가 MTU 보다 큰 경우 단편화 진행

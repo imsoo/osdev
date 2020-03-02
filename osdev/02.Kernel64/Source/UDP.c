@@ -33,7 +33,7 @@ void kUDP_Task(void)
     switch (stFrame.eDirection)
     {
     case FRAME_UP:
-      kPrintf("UDP | Receive UDP Datagram \n");
+      // kPrintf("UDP | Receive UDP Datagram \n");
 
       kDecapuslationFrame(&stFrame, &pstUDPHeader, sizeof(UDP_HEADER), &pbUDPPayload);
 
@@ -58,7 +58,7 @@ void kUDP_Task(void)
 
       break;  /* End of case FRAME_UP: */
     case FRAME_DOWN:
-      kPrintf("UDP | Send UDP Datagram \n");
+      // kPrintf("UDP | Send UDP Datagram \n");
       stUDPHeader.wDestinationPort = htons(stFrame.dwDestPort);
       stUDPHeader.wSourcePort = htons(stFrame.dwDestPort >> 16);
       stUDPHeader.wLength = htons(sizeof(UDP_HEADER) + stFrame.wLen);
