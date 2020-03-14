@@ -404,6 +404,7 @@ kISRReserved:
 
     mov rdi, 41
     call kEthernetHandler
+    ; call kCommonInterruptHandler
 
     KLOADCONTEXT     
     iretq            
@@ -424,6 +425,7 @@ kISRNotUsed2:
  
     mov rdi, 43
     call kEthernetHandler
+    ; call kCommonInterruptHandler
 
     KLOADCONTEXT     
     iretq            

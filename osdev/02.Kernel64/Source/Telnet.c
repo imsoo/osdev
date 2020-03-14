@@ -58,6 +58,10 @@ void kTelent_SimpleClient(QWORD dwAddress, WORD wPort)
 
   kPrintf("Telnet | Connection established...\n");
 
+  /*
+    TODO : 출력 개선 
+  */
+
   while (1) {
     dwRecvLen = kTCP_Recv(pstTCB, vbBuf, 1, TCP_NONBLOCK);
     if (dwRecvLen < 0) {  // 연결 종로

@@ -12,8 +12,13 @@ int memcpy( void* pvDestination, const void* pvSource, int iSize );
 int memcmp( const void* pvDestination, const void* pvSource, int iSize );
 int strcpy( char* pcDestination, const char* pcSource );
 int strcmp( char* pcDestination, const char* pcSource );
+char* strdup(const char *s);
 int strlen( const char* pcBuffer );
+char* strchr(const char* s, int c);
 long atoi( const char* pcBuffer, int iRadix );
+double atof(const char *s);
+void assert(int a);
+
 QWORD HexStringToQword( const char* pcBuffer );
 long DecimalStringToLong( const char* pcBuffer );
 int itoa( long lValue, char* pcBuffer, int iRadix );
@@ -23,8 +28,23 @@ void ReverseString( char* pcBuffer );
 int sprintf( char* pcBuffer, const char* pcFormatString, ... );
 int vsprintf( char* pcBuffer, const char* pcFormatString, va_list ap );
 void printf( const char* pcFormatString, ... );
+void fprintf(int type, const char* pcFormatString, ...);
 void srand( QWORD qwSeed );
 QWORD rand( void );
+
+// ctype
+int isalnum(int c);
+int isalpha(int c);
+int isdigit(int c);
+int tolower(int c);
+int isspace(int c);
+
+int fgetc(FILE * f); // temp
+char *fgets(char *s, int n, FILE *f);
+
+typedef int(*__compar_d_fn_t) (const void *, const void *);
+void qsort(void *const pbase, size_t total_elems, size_t size,
+  __compar_d_fn_t cmp);
 
 // GUI
 BOOL IsInRectangle( const RECT* pstArea, int iX, int iY );

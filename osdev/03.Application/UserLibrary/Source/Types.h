@@ -12,6 +12,9 @@
 #define NULL    0
 
 // Console
+#define stderr  2
+#define stdout  1
+#define stdin   0
 #define CONSOLE_WIDTH                       80
 #define CONSOLE_HEIGHT                      25
 
@@ -84,6 +87,7 @@
 #define TASK_LOADBALANCINGID        0xFF
 
 // File
+#define EOF (-1)
 #define FILESYSTEM_MAXFILENAMELENGTH        24
 
 #define SEEK_SET                            0
@@ -189,6 +193,7 @@ typedef struct kFileHandleStruct
     DWORD dwCurrentClusterIndex;
     DWORD dwPreviousClusterIndex;
     DWORD dwCurrentOffset;
+    DWORD dwFlags;
 } FILEHANDLE;
 
 typedef struct kDirectoryHandleStruct

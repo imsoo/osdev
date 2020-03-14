@@ -58,6 +58,12 @@
     <Filter Include="03.Application\03.Hexa\Source">
       <UniqueIdentifier>{c061d776-25ee-4b34-a1ad-2aefb6155398}</UniqueIdentifier>
     </Filter>
+    <Filter Include="03.Application\04.Browser">
+      <UniqueIdentifier>{f69a2de8-a311-48e6-bcd7-2b877860d724}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="03.Application\04.Browser\Source">
+      <UniqueIdentifier>{2caece19-0c62-4477-a504-08847288d15b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Makefile" />
@@ -238,6 +244,42 @@
     <ClCompile Include="02.Kernel64\Source\Telnet.c">
       <Filter>02.Kernel64\Source</Filter>
     </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\Main.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\css.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\display.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\dom.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\html.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\layout.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\print.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\refalist.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\refcnt.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\refhash.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\stream.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="03.Application\04.Browser\Source\style.c">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="00.BootLoader\BootLoader.asm">
@@ -299,6 +341,9 @@
     </None>
     <None Include="..\run_bochs.bat" />
     <None Include="..\run.bat" />
+    <None Include="03.Application\04.Browser\makefile">
+      <Filter>03.Application\04.Browser</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="01.Kernel32\Source\Types.h">
@@ -483,6 +528,42 @@
     </ClInclude>
     <ClInclude Include="02.Kernel64\Source\Telnet.h">
       <Filter>02.Kernel64\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\Main.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\css.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\display.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\dom.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\html.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\layout.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\print.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\refalist.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\refcnt.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\refhash.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\stream.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="03.Application\04.Browser\Source\style.h">
+      <Filter>03.Application\04.Browser\Source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

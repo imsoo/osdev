@@ -157,6 +157,47 @@ void* kAllocateMemory(QWORD qwSize)
 }
 
 /*
+  Calloc Memory
+*/
+void* kCallocateMemory(QWORD qwCount, QWORD qwSize)
+{
+  QWORD qwAllocSize = qwCount * qwSize;
+  void *pvNewAddress = kAllocateMemory(qwAllocSize);
+
+  if (pvNewAddress != NULL) {
+    kMemSet(pvNewAddress, 0, qwAllocSize);
+    return pvNewAddress;
+  }
+
+  return NULL;
+}
+
+/*
+  Realloc Memory
+*/
+void* kReallocateMemory(void* pvAddress, QWORD qwSize)
+{
+  void* pvNewAddress;
+
+  if (pvAddress == NULL) {
+    pvNewAddress = kAllocateMemory(qwSize);
+    if (pvNewAddress == NULL) { return NULL; }
+  }
+  else {
+    if (kAllocatedSize(pvAddress) < qwSize) {
+      pvNewAddress = kAllocateMemory(qwSize);
+      if (pvNewAddress == NULL) { return NULL; }
+      kMemCpy(pvNewAddress, pvAddress, kAllocatedSize(pvAddress));
+      kFreeMemory(pvAddress);
+    }
+    else {
+      pvNewAddress = pvAddress;
+    }
+  }
+  return pvNewAddress;
+}
+
+/*
   Find Fit Block Size
 */
 static QWORD kGetBuddyBlockSize(QWORD qwSize)
@@ -286,6 +327,35 @@ static void kSetFlagInBitmap(int iBlockListIndex, int iOffset, BYTE bFlag)
     }
     pbBitmap[iOffset / 8] &= ~(0x01 << (iOffset % 8));
   }
+}
+
+/*
+  Return Allocated Memory Size
+*/
+QWORD kAllocatedSize(void* pvAddress)
+{
+  QWORD qwRelativeAddress;
+  int iSizeArrayOffset;
+  QWORD qwBlockSize;
+  int iBlockListIndex;
+
+  if (pvAddress == NULL) {
+    return FALSE;
+  }
+
+  qwRelativeAddress = ((QWORD)pvAddress - gs_stDynamicMemory.qwStartAddress);
+  iSizeArrayOffset = qwRelativeAddress / DYNAMICMEMORY_MIN_SIZE;
+
+  // if not allocated
+  if (gs_stDynamicMemory.pbAllocatedBlockListIndex[iSizeArrayOffset] == 0xFF) {
+    return 0;
+  }
+
+  // get BlockList Index and Init Index
+  iBlockListIndex = (int)gs_stDynamicMemory.pbAllocatedBlockListIndex[iSizeArrayOffset];
+  qwBlockSize = DYNAMICMEMORY_MIN_SIZE << iBlockListIndex;
+
+  return qwBlockSize;
 }
 
 /*

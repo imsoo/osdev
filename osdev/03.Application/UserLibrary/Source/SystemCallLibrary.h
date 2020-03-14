@@ -28,6 +28,8 @@ BYTE getch( void );
 
 // Dynamic Memory
 void* malloc( QWORD qwSize );
+void* realloc(void* pvAddress, QWORD qwSize);
+void* calloc(QWORD qwCount, QWORD qwSize);
 BOOL free( void* pvAddress );
 
 // File I/O
@@ -35,6 +37,7 @@ FILE* fopen( const char* pcFileName, const char* pcMode );
 DWORD fread( void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFile );
 DWORD fwrite( const void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFile );
 int fseek( FILE* pstFile, int iOffset, int iOrigin );
+int feof(FILE* pstFile);
 int fclose( FILE* pstFile );
 int remove( const char* pcFileName );
 DIR* opendir( const char* pcDirectoryName );

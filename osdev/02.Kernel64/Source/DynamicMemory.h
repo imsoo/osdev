@@ -49,6 +49,9 @@ typedef struct kDynamicMemoryManagerStruct {
 // fucntion
 void kInitializeDynamicMemory(void);
 void* kAllocateMemory(QWORD qwSize);
+void* kCallocateMemory(QWORD qwCount, QWORD qwSize);
+void* kReallocateMemory(void* pvAddress, QWORD qwSize);
+QWORD kAllocatedSize(void* pvAddress);
 BOOL kFreeMemory(void* pvAddress);
 void kGetDynamicMemoryInformation(QWORD* pqwDynamicMemoryStartAddress, QWORD* pqwDynamicMemoryTotalSize,
   QWORD* pqwMetaDataSize, QWORD* pqwUsedMemorySize);

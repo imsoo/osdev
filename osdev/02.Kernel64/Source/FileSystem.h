@@ -33,6 +33,7 @@
 #define SEEK_CUR    FILESYSTEM_SEEK_CUR
 #define SEEK_END    FILESYSTEM_SEEK_END
 
+#define feof        kEOFFile
 #define fopen       kOpenFile
 #define fread       kReadFile
 #define fwrite      kWriteFile
@@ -129,6 +130,9 @@ typedef struct kFileHandleStruct
 
   // file pointer offset in cluster
   DWORD dwCurrentOffset;
+
+  // Flags : Using EOF Flags  (Temp)
+  DWORD dwFlags
 } FILEHANDLE;
 
 typedef struct kDirectoryHandleStruct 
@@ -228,6 +232,7 @@ FILE* kOpenFile(const char* pcFileName, const char* pcMode);
 DWORD kReadFile(void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFile);
 DWORD kWriteFile(const void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFile);
 int kSeekFile(FILE* pstFile, int iOffset, int iOrigin);
+int kEOFFile(FILE* pstFile);
 BOOL kWriteZero(FILE* pstFile, DWORD dwCount);
 int kCloseFile(FILE* pstFile);
 BOOL kIsFileOpened(const DIRECTORYENTRY* pstEntry);

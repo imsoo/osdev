@@ -849,6 +849,7 @@ FILE* kOpenFile(const char* pcFileName, const char* pcMode)
   pstFile->stFileHandle.dwCurrentClusterIndex = stEntry.dwStartClusterIndex;
   pstFile->stFileHandle.dwPreviousClusterIndex = stEntry.dwStartClusterIndex;
   pstFile->stFileHandle.dwCurrentOffset = 0;
+  pstFile->stFileHandle.dwFlags = 0;
 
   // if 'a' mode, move filepointer to end
   if (pcMode[0] == 'a') {
@@ -941,6 +942,7 @@ DWORD kReadFile(void* pvBuffer, DWORD dwSize, DWORD dwCount, FILE* pstFile)
   // if file pointer is end OR Last Cluster
   if ((pstFileHandle->dwCurrentOffset == pstFileHandle->dwFileSize) ||
     (pstFileHandle->dwCurrentClusterIndex == FILESYSTEM_LASTCLUSTER)) {
+    pstFileHandle->dwFlags = 1;
     return 0;
   }
 
@@ -1204,9 +1206,24 @@ int kSeekFile(FILE* pstFile, int iOffset, int iOrigin)
     }
   }
   pstFileHandle->dwCurrentOffset = dwRealOffset;
+  pstFileHandle->dwFlags = 0;
 
   kUnlock(&(gs_stFileSystemManager.stMutex));
   // --- CRITCAL SECTION END ---
+  return 0;
+}
+
+int kEOFFile(FILE* pstFile)
+{
+  if ((pstFile == NULL) || (pstFile->bType != FILESYSTEM_TYPE_FILE)) {
+    return 1;
+  }
+
+  // if EOF Set
+  if ((pstFile->stFileHandle.dwFlags == 1)) {
+    return 1;
+  }
+
   return 0;
 }
 

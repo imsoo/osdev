@@ -40,6 +40,22 @@ void* malloc( QWORD qwSize )
     return ( void* ) ExecuteSystemCall( SYSCALL_MALLOC, &stParameter );
 }
 
+void* realloc(void* pvAddress, QWORD qwSize)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pvAddress;
+  PARAM(1) = qwSize;
+  return (void*)ExecuteSystemCall(SYSCALL_REALLOC, &stParameter);
+}
+
+void* calloc(QWORD qwCount, QWORD qwSize)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = qwCount;
+  PARAM(1) = qwSize;
+  return (void*)ExecuteSystemCall(SYSCALL_CALLOC, &stParameter);
+}
+
 BOOL free( void* pvAddress )
 {
     PARAMETERTABLE stParameter;
@@ -82,6 +98,13 @@ int fseek( FILE* pstFile, int iOffset, int iOrigin )
     PARAM( 1 ) = ( QWORD ) iOffset;
     PARAM( 2 ) = ( QWORD ) iOrigin;
     return ( int ) ExecuteSystemCall( SYSCALL_FSEEK, &stParameter );     
+}
+
+int feof(FILE* pstFile)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pstFile;
+  return (int)ExecuteSystemCall(SYSCALL_FEOF, &stParameter);
 }
 
 int fclose( FILE* pstFile )

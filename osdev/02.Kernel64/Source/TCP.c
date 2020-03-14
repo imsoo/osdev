@@ -1334,7 +1334,7 @@ TCP_TCB* kTCP_CreateTCB(WORD wLocalPort, QWORD qwForeignSocket, TCP_FLAG eFlag)
   kTCP_PutRequestToTCB(pstTCB, &stRequest);
   
   // TCB 담당 상태 머신 생성
-  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGH, 0, 0,
+  if (kCreateTask(TASK_FLAGS_THREAD | TASK_FLAGS_HIGHEST, 0, 0,
     (QWORD)kTCP_Machine, TASK_LOADBALANCINGID) == NULL)
   {
     kPrintf("Create kTCP_Machine Fail\n");

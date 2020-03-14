@@ -55,6 +55,10 @@ QWORD kProcessSystemCall(QWORD qwServiceNumber, PARAMETERTABLE* pstParameter)
   // Dynamic Memory
   case SYSCALL_MALLOC:
     return (QWORD)kAllocateMemory(PARAM(0));
+  case SYSCALL_REALLOC:
+    return (QWORD)kReallocateMemory((void*)PARAM(0), PARAM(1));
+  case SYSCALL_CALLOC:
+    return (QWORD)kCallocateMemory(PARAM(0), PARAM(1));
   case SYSCALL_FREE:
     return kFreeMemory((void*)PARAM(0));
 
@@ -69,6 +73,8 @@ QWORD kProcessSystemCall(QWORD qwServiceNumber, PARAMETERTABLE* pstParameter)
       (FILE*)PARAM(3));
   case SYSCALL_FSEEK:
     return fseek((FILE*)PARAM(0), PARAM(1), PARAM(2));
+  case SYSCALL_FEOF:
+    return feof((FILE*)PARAM(0));
   case SYSCALL_FCLOSE:
     return fclose((FILE*)PARAM(0));
   case SYSCALL_REMOVE:

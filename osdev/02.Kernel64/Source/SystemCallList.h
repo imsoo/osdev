@@ -10,6 +10,8 @@
 
 // Dynamic Memory
 #define SYSCALL_MALLOC                      5 
+#define SYSCALL_REALLOC                     74
+#define SYSCALL_CALLOC                      75
 #define SYSCALL_FREE                        6 
 
 // File I/O
@@ -17,6 +19,7 @@
 #define SYSCALL_FREAD                       8 
 #define SYSCALL_FWRITE                      9 
 #define SYSCALL_FSEEK                       10
+#define SYSCALL_FEOF                        76
 #define SYSCALL_FCLOSE                      11
 #define SYSCALL_REMOVE                      12
 #define SYSCALL_OPENDIR                     13
