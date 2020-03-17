@@ -36,7 +36,6 @@ void Main(void)
 
   // Init Console
   kInitializeConsole(0, 10);
-  kPrintf("Switch To IA - 32e Mode Success...\n");
   kPrintf("Switch To IA-32e Mode Success...\n");
   kPrintf("IA-32e C Language Kernel Start..............[Pass]\n");
 

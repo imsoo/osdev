@@ -37,7 +37,7 @@ void kIP_Task(void)
 
     // ≈• »Æ¿Œ
     if (kIP_GetFrameFromFrameQueue(&stFrame) == FALSE) {
-      kSleep(0);
+      // kSleep(0);
       continue;
     }
 

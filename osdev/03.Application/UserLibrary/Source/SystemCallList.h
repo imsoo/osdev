@@ -100,4 +100,12 @@
 #define SYSCALL_QSORT                       76
 #define SYSCALL_TEST                        0xFFFFFFFF
 
+// Net
+#define SYSCALL_TCPOPEN                     100
+#define SYSCALL_TCPSEND                     101
+#define SYSCALL_TCPRECV                     102
+#define SYSCALL_TCPCLOSE                    103
+#define SYSCALL_TCPSTATUS                   104
+#define SYSCALL_DNSGET                      200
+
 #endif /*__SYSTEMCALLLIST_H_*/

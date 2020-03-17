@@ -628,3 +628,47 @@ BOOL IsGraphicMode( void )
 {
     ExecuteSystemCall( SYSCALL_ISGRAPHICMODE, NULL );    
 }
+
+// Net
+TCP_TCB* TCP_Open(WORD wLocalPort, QWORD qwForeignSocket, BYTE bFlag)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)wLocalPort;
+  PARAM(1) = (QWORD)qwForeignSocket;
+  PARAM(2) = (QWORD)bFlag;
+  return (TCP_TCB*)ExecuteSystemCall(SYSCALL_TCPOPEN, &stParameter);
+}
+
+long TCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pstTCB;
+  PARAM(1) = (QWORD)pbBuf;
+  PARAM(2) = (QWORD)wLen;
+  PARAM(3) = (QWORD)bFlag;
+  return (long)ExecuteSystemCall(SYSCALL_TCPSEND, &stParameter);
+}
+
+long TCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pstTCB;
+  PARAM(1) = (QWORD)pbBuf;
+  PARAM(2) = (QWORD)wLen;
+  PARAM(3) = (QWORD)bFlag;
+  return (long)ExecuteSystemCall(SYSCALL_TCPRECV, &stParameter);
+}
+
+BYTE TCP_Close(TCP_TCB* pstTCB)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pstTCB;
+  return ExecuteSystemCall(SYSCALL_TCPCLOSE, &stParameter);
+}
+
+BYTE TCP_Status(TCP_TCB* pstTCB)
+{
+  PARAMETERTABLE stParameter;
+  PARAM(0) = (QWORD)pstTCB;
+  return ExecuteSystemCall(SYSCALL_TCPSTATUS, &stParameter);
+}

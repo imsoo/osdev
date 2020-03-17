@@ -84,7 +84,7 @@ SHELLCOMMANDENTRY gs_vstCommandTable[] =
   { "exec", "Execute Application Program, ex)exec a.elf argument", kExecuteApplicationProgram },
 
   // Network
-  { "initn", "InitEthernet(temp)" , kInitNetwork },
+  { "initn", "InitNetwork" , kInitNetwork },
   { "telnet", "telnet <ip> <port>", kTelnetC },
   { "dns", "Print DNS" , kShowDNSState },
   { "arp", "Print ARP" , kShowARPState },

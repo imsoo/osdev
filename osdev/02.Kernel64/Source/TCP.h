@@ -21,7 +21,7 @@
 
 #define TCP_REQUEST_QUEUE_MAX_COUNT 100
 
-#define TCP_WINDOW_DEFAULT_SIZE 8192
+#define TCP_WINDOW_DEFAULT_SIZE 8192 * 5
 #define TCP_MAXIMUM_SEGMENT_SIZE 1380
 #define TCP_MINIMUM_SEGMENT_SIZE 500
 #define TCP_MSL_DEFAULT_SECOND 120
@@ -32,6 +32,7 @@ typedef enum kTCPFlag
   TCP_ACTIVE = 1,
   TCP_PUSH = 2,
   TCP_NONBLOCK = 3,
+  TCP_BLOCK = 4,
 } TCP_FLAG;
 
 typedef enum kTCPState
@@ -180,7 +181,7 @@ void kTCP_ProcessRetransmitQueue(const TCP_TCB* pstTCB);
 void kTCP_UpdateRetransmitQueue(const TCP_TCB* pstTCB, DWORD dwACK);
 BOOL kTCP_IsNeedRetransmit(const TCP_HEADER* pstHeader);
 BOOL kTCP_IsDuplicateSegment(const TCP_TCB* pstTCB, DWORD dwSEGLEN, DWORD dwSEGSEQ);
-void kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
+BOOL kTCP_ProcessSegment(TCP_TCB* pstTCB, TCP_HEADER* pstHeader, BYTE* pbPayload, WORD wPayloadLen);
 void kTCP_ProcessRequest();
 void kTCP_ProcessOption(TCP_TCB* pstTCB, TCP_HEADER* pstHeader);
 inline void kTCP_ReturnRequest(TCP_REQUEST* pstRequest, long qwReturnValue);

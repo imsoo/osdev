@@ -1275,6 +1275,8 @@ int kCloseFile(FILE* pstFile)
 
   kFreeFileDirectoryHandle(pstFile);
 
+  kFlushFileSystemCache();
+
   return 0;
 }
 

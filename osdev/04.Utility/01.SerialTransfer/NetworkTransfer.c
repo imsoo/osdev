@@ -66,6 +66,8 @@ int main( int argc, char** argv )
         fprintf( stderr, "Socket Connect Success, IP 127.0.0.1, Port 4444\n" );
     }
     
+	// getchar();
+	
     if( send( iSocket, &dwDataLength, 4, 0 ) != 4 )
     {
         fprintf( stderr, "Data Length Send Fail, [%d] Byte\n", dwDataLength );

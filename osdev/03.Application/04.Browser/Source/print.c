@@ -142,6 +142,10 @@ void print_displaylist(ArrayList *dl) {
     case Text:
       printf("command: Text %s\n", cmd->Text.text);
       break;
+
+    case Img:
+      printf("command: Img src : %s, alt : %s\n", cmd->Img.src, cmd->Img.alt);
+      break;
     }
   }
 }

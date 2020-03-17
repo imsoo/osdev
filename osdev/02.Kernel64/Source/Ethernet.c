@@ -36,7 +36,7 @@ void kEthernet_Task(void)
   while (1)
   {
     if (kEthernet_GetFrameFromFrameQueue(&stFrame) == FALSE) {
-      kSleep(0);
+      //kSleep(0);
       continue;
     }
 
@@ -47,7 +47,6 @@ void kEthernet_Task(void)
 
       // kPrintf("Ethernet | Receive Frame | wType : %x\n", pstEthernetHeader->wType);
 
-
       if (ntohs(pstEthernetHeader->wType) == ETHERNET_HEADER_TYPE_ARP) {
         gs_stEthernetManager.pfSideOut(stFrame);
       }
@@ -55,7 +54,8 @@ void kEthernet_Task(void)
         gs_stEthernetManager.pfUp(stFrame);
       }
       else {
-        kPrintf("Ethernet | Unkown Packet | Type : %d\n", pstEthernetHeader->wType);
+        // kPrintf("Ethernet | Unkown Packet | Type : %d\n", pstEthernetHeader->wType);
+        kFreeFrame(&stFrame);
       }
       break;  /* End of case FRAME_UP */
     case FRAME_DOWN:

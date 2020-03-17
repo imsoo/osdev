@@ -5,8 +5,8 @@
 #include "Frame.h"
 
 // Desc
-#define DESC_RX_NUM 32
-#define DESC_TX_NUM 8
+#define DESC_RX_NUM 256
+#define DESC_TX_NUM 256
 
 #define REG_EEPROM  0x0014
 

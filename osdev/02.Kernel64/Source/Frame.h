@@ -4,7 +4,7 @@
 #include "Types.h"
 
 #define FRAME_MAX_SIZE          1514
-#define FRAME_QUEUE_MAX_COUNT   100
+#define FRAME_QUEUE_MAX_COUNT   1024
 
 typedef BOOL(*UpFunction)(FRAME);
 typedef BOOL(*DownFunction)(FRAME);

@@ -11,6 +11,7 @@ static void render_layout_box(ArrayList *list, LayoutBox *layout_box);
 static void render_background(ArrayList *list, LayoutBox *layout_box);
 static void render_borders(ArrayList *list, LayoutBox *layout_box);
 static void render_text(ArrayList *list, LayoutBox *layout_box);
+static void render_img(ArrayList *list, LayoutBox *layout_box);
 
 #if 0
 #define TRACE(s)  do{printf("%d: %s\n", __LINE__, s);fflush(stdout);}while(0);
@@ -23,6 +24,7 @@ static void display_command_dtor(void *p) {
     switch(cmd->type) {
         case SolidColor: rc_release(cmd->solidColor.color); break;
         case Text: rc_release(cmd->Text.text); break;
+        case Img: rc_release(cmd->Img.src); rc_release(cmd->Img.alt); break;
     }
 }
 
@@ -47,7 +49,7 @@ static void render_layout_box(ArrayList *list, LayoutBox *layout_box) {
     
     // TODO: render text
     render_text(list, layout_box);
-    
+    render_img(list, layout_box);
     int i;
 	for(i = 0; i < al_size(layout_box->children); i++) {
 		LayoutBox *child = al_get(layout_box->children, i);
@@ -107,6 +109,18 @@ static DisplayCommand *make_text_cmd(float x, float y, float w, float h, char *t
   return cmd;
 }
 
+static DisplayCommand *make_img_cmd(float x, float y, float w, float h, char *src, char *alt) {
+  DisplayCommand *cmd = new_display_command();
+  cmd->type = Img;
+  cmd->Img.rect.x = x;
+  cmd->Img.rect.y = y;
+  cmd->Img.rect.width = w;
+  cmd->Img.rect.height = h;
+  cmd->Img.src = rc_retain(src);
+  cmd->Img.alt = rc_retain(alt);
+  return cmd;
+}
+
 static void render_text(ArrayList *list, LayoutBox *layout_box)
 {
   StyledNode *style = layout_box->box_type.node;
@@ -125,6 +139,31 @@ static void render_text(ArrayList *list, LayoutBox *layout_box)
     d->border.left,
     bb.height,
     text));
+}
+
+static void render_img(ArrayList *list, LayoutBox *layout_box) {
+  StyledNode *style = layout_box->box_type.node;
+  if (style == NULL) return;
+
+  Node* n = layout_box->box_type.node->node;
+  if ((n == NULL) || (n->type != T_ELEMENT)) return;
+  if (n->element.tag_name == NULL) return;
+  if (strcmp(n->element.tag_name, "img") != 0) return;
+
+  const char *src = ht_get(n->element.attributes, "src");
+  if (src == NULL) return;
+
+  Dimensions *d = &layout_box->dimensions;
+  Rect bb = border_box(d);
+
+  // Img
+  al_add(list, make_img_cmd(
+    bb.x,
+    bb.y,
+    d->border.left,
+    bb.height,
+    src,
+    ht_get(n->element.attributes, "alt")));
 }
 
 static void render_borders(ArrayList *list, LayoutBox *layout_box) {

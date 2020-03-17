@@ -126,4 +126,11 @@ QWORD GetTotalRAMSize( void );
 QWORD GetTickCount( void );
 void Sleep( QWORD qwMillisecond );
 
+// Net
+TCP_TCB* TCP_Open(WORD wLocalPort, QWORD qwForeignSocket, BYTE bFlag);
+long TCP_Send(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+long TCP_Recv(TCP_TCB* pstTCB, BYTE* pbBuf, WORD wLen, BYTE bFlag);
+BYTE TCP_Close(TCP_TCB* pstTCB);
+BYTE TCP_Status(TCP_TCB* pstTCB);
+
 #endif /*__SYSTEMCALLLIBRARY_H__*/

@@ -367,13 +367,13 @@ void kHDDHandler(int iVectorNumber)
 
   iIRQ = iVectorNumber - PIC_IRQSTARTVECTOR;
   // 14 Primary PATA
-  if (iIRQ == 14) {
+  //if (iIRQ == 14) {
     kSetHDDInterruptFlag(TRUE, TRUE);
-  }
+  //}
   // 15 Second PATA
-  else {
-    kSetHDDInterruptFlag(FALSE, TRUE);
-  }
+  //else {
+  //  kSetHDDInterruptFlag(FALSE, TRUE);
+  //}
   
   // Send EOI
   kSendEOI(iIRQ);

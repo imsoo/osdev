@@ -1,0 +1,5 @@
+:: qemu directory (qemu-w32-setup-20151216)
+cd "directory"
+
+:: Serial Transfer, MultiCore
+:: qemu-system-x86_64.exe -L . -m 64 -localtime -fda "Disk" -hda "HDD" -boot a -M pc -serial tcp:127.0.0.1:4444,server,nowait -smp 4 -net nic,vlan=0 -net tap,vlan=0,ifname=tap0,script=no

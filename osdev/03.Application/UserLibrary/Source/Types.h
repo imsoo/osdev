@@ -299,4 +299,34 @@ typedef struct{
     int bit_remain;
 }JPEG;
 
+typedef enum kTCPFlag
+{
+  TCP_PASSIVE = 0,
+  TCP_ACTIVE = 1,
+  TCP_PUSH = 2,
+  TCP_NONBLOCK = 3,
+  TCP_BLOCK = 4,
+} TCP_FLAG;
+
+typedef enum kTCPState
+{
+  TCP_CLOSED = 0,
+  TCP_LISTEN = 1,
+  TCP_SYN_SENT = 2,
+  TCP_SYN_RECEIVED = 3,
+  TCP_ESTABLISHED = 4,
+  TCP_FIN_WAIT_1 = 5,
+  TCP_FIN_WAIT_2 = 6,
+  TCP_CLOSE_WAIT = 7,
+  TCP_CLOSING = 8,
+  TCP_LAST_ACK = 9,
+  TCP_TIME_WAIT = 10,
+  TCP_UNKNOWN = 11,
+} TCP_STATE;
+
+typedef struct kTCPControlBlock
+{
+  BYTE b[205];
+} TCP_TCB;
+
 #endif /*TYPES_H_*/

@@ -10,6 +10,8 @@
 #include "Window.h"
 #include "JPEG.h"
 #include "Loader.h"
+#include "TCP.h"
+#include "DNS.h"
 
 /*
   Initialize System Call MSR Register
@@ -245,6 +247,20 @@ QWORD kProcessSystemCall(QWORD qwServiceNumber, PARAMETERTABLE* pstParameter)
   case SYSCALL_TEST:
     kPrintf("Test System Call... System Call Test Success~!!\n");
     return TRUE;
+
+  // Net
+  case SYSCALL_TCPOPEN:
+    return (QWORD)kTCP_Open(PARAM(0), PARAM(1), PARAM(2));
+  case SYSCALL_TCPSEND:
+    return kTCP_Send((TCP_TCB*)PARAM(0), (BYTE*)PARAM(1), PARAM(2), PARAM(3));
+  case SYSCALL_TCPRECV:
+    return kTCP_Recv((TCP_TCB*)PARAM(0), (BYTE*)PARAM(1), PARAM(2), PARAM(3));
+  case SYSCALL_TCPCLOSE:
+    return kTCP_Close((TCP_TCB*)PARAM(0));
+  case SYSCALL_TCPSTATUS:
+    return kTCP_Status((TCP_TCB*)PARAM(0));
+  case SYSCALL_DNSGET:
+    return kDNS_GetAddress((const BYTE*)PARAM(0), (BYTE*)PARAM(1));
 
   default:
     kPrintf("Undefined System Call~!!!, Service Number: %d\n",
